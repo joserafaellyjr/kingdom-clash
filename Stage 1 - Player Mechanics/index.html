@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#202820" />
+  <title>Kingdom Clash — Stage 1: Player Mechanics</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <main id="game">
+    <div id="hud">
+      <div class="brand">KINGDOM CLASH <span>PROTOTYPE</span></div>
+      <div class="stage-label">STAGE 1 · PLAYER MECHANICS</div>
+      <div class="controls">
+        <span><kbd>W A S D</kbd> Move</span>
+        <span><kbd>SHIFT</kbd> Sprint</span>
+        <span><kbd>SPACE</kbd> Jump</span>
+        <span><kbd>MOUSE</kbd> Look</span>
+      </div>
+    </div>
+    <div id="center-mark" aria-hidden="true"></div>
+    <section id="start-screen" class="overlay">
+      <div class="panel">
+        <p class="eyebrow">THE TRAINING GROUNDS</p>
+        <h1>Kingdom Clash</h1>
+        <p class="subtitle">A first-person medieval battlefield prototype.</p>
+        <p class="description">Explore the courtyard and test the commander's movement. This first build focuses on controls and the 3D world.</p>
+        <button id="start-button">ENTER THE COURTYARD</button>
+        <p class="hint">Mouse look activates after you enter. Press Esc to pause.</p>
+      </div>
+    </section>
+    <section id="pause-screen" class="overlay hidden">
+      <div class="panel compact">
+        <p class="eyebrow">GAME PAUSED</p>
+        <h2>Take a breather, Commander.</h2>
+        <button id="resume-button">RESUME</button>
+      </div>
+    </section>
+    <div id="status" role="status">Ready</div>
+  </main>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
