@@ -1,28 +1,24 @@
-# Stage 2 — Battle System
+# Stage 2 — Battlefield and Combat Foundation
 
-**Status: Integrated into the main game**
+**Status: Replaced and integrated into the main game**
 
-Stage 2 is not a separate game or launch button. Its systems are loaded into the Stage 1 courtyard and use the same commander, camera, controls, and world.
+Stage 2 is not a separate game or launch button. The current World War I frontline, player equipment, squads, and capture objective all run in the shared Stage 1 world.
 
-## How to begin
-1. Launch Kingdom Clash from the main game page.
-2. Enter the courtyard and follow the path toward the red standard near the training hall.
-3. When the prompt appears, press **E** to muster for battle.
-
-## Battle loop
-- Three stationary opposing guards appear in the courtyard.
-- Left-click to swing the commander's sword; each guard takes three hits.
-- After clearing the guards, enter the golden capture circle and hold it for eight seconds.
-- A three-minute timer limits the battle.
-- Victory and defeat screens let the player retry or return to the courtyard.
+## Current battlefield
+- A muddy road between blue and red flag bases.
+- Ten friendly soldiers and ten opposing soldiers.
+- Visible team-colored soldier models with simple movement and arcade combat behavior.
+- Player health, an ammunition counter, reload action, aiming, and a portable armor shield.
+- Capture the opposing flag after the opposing squad has been cleared.
 
 ## Controls
 - **WASD** — move
+- **Double-tap W** — sprint while W is held
 - **Mouse** — look
-- **Shift** — sprint
-- **Space** — jump
-- **E** — begin battle near the red standard
-- **Left click** — sword strike during battle
+- **Left click** — fire
+- **Right click (hold)** — aim
+- **R** — reload
+- **Shift** — deploy / retract the portable armor shield
 - **Esc** — pause / release mouse
 
-Enemy movement, attacks, formations, and commander AI are Stage 3.
+This is an early game prototype. More advanced squad orders, soldier roles, improved models, progression, and multiplayer remain future work.
