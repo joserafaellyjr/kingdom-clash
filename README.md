@@ -11,7 +11,7 @@ A browser-based 3D medieval battlefield game built with JavaScript and Three.js.
 
 ## Development roadmap
 1. **Player Mechanics** — first-person movement, camera, controls, and commander. **Complete**
-2. **Battle System** — battlefields, teams, combat, objectives, victory, and defeat. **Playable foundation complete**
+2. **Battle System** — combat and objectives integrated into the same courtyard and commander. **Integrated playable foundation**
 3. **NPC Opponents** — enemy AI, soldiers, and enemy commanders.
 4. **Coins and Recruitment** — start with 10 soldiers; earn battle coins and recruit more.
 5. **Equipment Shops** — buy commander gear individually and army gear by entire unit.
@@ -20,11 +20,11 @@ A browser-based 3D medieval battlefield game built with JavaScript and Three.js.
 8. **Additional Content** — maps, units, weapons, armor, and battle types.
 
 ## Current stages
-- [Stage 1 — Player Mechanics](Stage%201%20-%20Player%20Mechanics/README.md): polished training courtyard, first-person controls, sprinting, jumping, and basic collision.
-- [Stage 2 — Battle System](Stage%202%20-%20Battle%20System/README.md): playable battle loop with melee strikes, opposing target units, capture objective, timer, and victory/defeat.
+- [Stage 1 — Player Mechanics](Stage%201%20-%20Player%20Mechanics/README.md): the shared world and commander foundation.
+- [Stage 2 — Battle System](Stage%202%20-%20Battle%20System/README.md): combat and objectives added directly to the Stage 1 world. There is one game entry point, not separate stage games.
 
 ## Run the game
-Open the project through a local web server (for example, VS Code Live Server), then open `Stage 1 - Player Mechanics/index.html`. Stage 2 is available from the Stage 1 menu or by opening `Stage 2 - Battle System/index.html`. Three.js is loaded from a CDN, so an internet connection is required.
+Open the project through a local web server (for example, VS Code Live Server), then open `Stage 1 - Player Mechanics/index.html`. Stage 2 begins inside the same world: walk toward the red standard near the training hall and press E when prompted. Three.js is loaded from a CDN, so an internet connection is required.
 
 ### Controls
 - **WASD** — move
