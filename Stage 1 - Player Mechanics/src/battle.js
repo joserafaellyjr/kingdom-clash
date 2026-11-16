@@ -35,7 +35,7 @@ export function createBattleSystem({ scene, camera, controls, status }) {
   `;
   document.head.appendChild(style);
   const $ = id => document.getElementById(id);
-  const muster = new THREE.Vector2(0, -24);
+  const muster = new THREE.Vector2(0, -4);
   const capture = new THREE.Vector2(0, -4);
   const state = { active:false, finished:false, remaining:3, time:180, hold:0, ready:true, swingStart:0, swing:0 };
   const guards = [];
@@ -50,11 +50,11 @@ export function createBattleSystem({ scene, camera, controls, status }) {
   }
 
   // Standard at the far end of the existing courtyard.
-  addCylinder(scene,0,3.1,-24,.07,.07,6.2,dark);
+  addCylinder(scene,0,3.1,-4,.07,.07,6.2,dark);
   const flag = new THREE.Mesh(new THREE.PlaneGeometry(2.1,2.6),red);
-  flag.position.set(1.05,4.55,-24); flag.castShadow=true; scene.add(flag);
+  flag.position.set(1.05,4.55,-4); flag.castShadow=true; scene.add(flag);
   const crest = new THREE.Mesh(new THREE.CircleGeometry(.4,6),gold);
-  crest.position.set(1.06,4.55,-23.98); scene.add(crest);
+  crest.position.set(1.06,4.55,-3.98); scene.add(crest);
 
   // Capture point and opposing training guards are added to the SAME world.
   const ring = new THREE.Mesh(new THREE.TorusGeometry(4.8,.13,8,48),gold);
