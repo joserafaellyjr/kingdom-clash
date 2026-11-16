@@ -8,7 +8,7 @@ A browser-based 3D first-person World War I frontline game built with JavaScript
 - Visible first-person weapon prop and a deployable portable armor shield.
 - Friendly and opposing soldiers physically present in the same world and engaging each other with simple arcade-style game logic.
 - Capture the opposing flag after clearing the opposing team.
-- Single-player foundation first; multiplayer and progression come later.
+- Pre-match class selection: Rifleman, Medic, Engineer, Support, Scout, and Officer.\n- Class perks affect health, movement, ammunition, reload time, or nearby squad support.\n- Frontlines-inspired team-battle direction; multiplayer and broader progression come later.
 
 ## Current controls
 | Input | Action |
@@ -24,7 +24,7 @@ A browser-based 3D first-person World War I frontline game built with JavaScript
 
 The shield stays deployed until Shift is pressed again. Movement is slower while it is deployed.
 
-## Development roadmap
+## Current class roles\n- Rifleman: balanced baseline.\n- Medic: gradually heals nearby friendly soldiers.\n- Engineer: extra personal health.\n- Support: larger ammunition supply.\n- Scout: faster movement with less health.\n- Officer: nearby friendly soldiers attack more frequently.\n\n## Development roadmap
 1. **Player mechanics** — first-person movement, visible equipment, aiming, shield, and controls.
 2. **Battlefield and combat foundation** — road, opposing bases, squads, simple combat behavior, and capture objective.
 3. **Improved NPCs** — better soldier models, squad behavior, and battlefield roles.
