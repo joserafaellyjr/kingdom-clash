@@ -4,47 +4,63 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#202820" />
-  <title>Kingdom Clash — Stage 1: Player Mechanics</title>
+  <title>Kingdom Clash — World War I Frontline</title>
   <link rel="stylesheet" href="./style.css" />
   <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-      }
-    }
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
   </script>
+  <style>
+    #battle-hud{position:absolute;z-index:3;top:100px;left:50%;transform:translateX(-50%);display:flex;gap:18px;padding:10px 16px;background:#101711d9;border:1px solid #d6c49b66;border-radius:7px;font-size:11px;white-space:nowrap}
+    #battle-hud span{color:#e8d9b8}#battle-hud b{color:#fff;font-variant-numeric:tabular-nums}
+    #kc-objective{position:absolute;z-index:3;top:155px;left:50%;transform:translateX(-50%);padding:8px 12px;background:#101711c9;border-radius:5px;color:#f1e6ce;font-size:11px;white-space:nowrap}
+    #kc-result{position:absolute;z-index:8;inset:0;display:grid;place-items:center;background:#080d0bd9}
+    #kc-result.hidden{display:none}
+    #kc-result .panel{width:min(90vw,430px)}
+    @media(max-width:760px){#battle-hud{top:145px;gap:8px;padding:8px;font-size:10px}#kc-objective{top:195px}}
+  </style>
 </head>
 <body>
   <main id="game">
     <div id="hud">
-      <div class="brand">KINGDOM CLASH <span>MEDIEVAL BATTLEFIELD</span></div>
-      <div class="stage-label">COMMANDER TRAINING</div>
+      <div class="brand">KINGDOM CLASH <span>WORLD WAR I · THE FRONT LINE</span></div>
+      <div class="stage-label">FRONTLINE COMMANDER</div>
       <div class="controls">
-        <span><kbd>W A S D</kbd> Move</span>
-        <span><kbd>SHIFT</kbd> Sprint</span>
-        <span><kbd>SPACE</kbd> Jump</span>
-        <span><kbd>MOUSE</kbd> Look</span>
-        <span><kbd>E</kbd> Muster</span>
-        <span><kbd>CLICK</kbd> Strike in battle</span>
+        <span><kbd>W A S D</kbd> Move</span><span><kbd>W W</kbd> Sprint</span>
+        <span><kbd>LEFT</kbd> Fire</span><span><kbd>RIGHT</kbd> Aim</span>
+        <span><kbd>R</kbd> Reload</span><span><kbd>SHIFT</kbd> Shield</span>
+        <span><kbd>ESC</kbd> Pause</span>
       </div>
     </div>
+    <div id="battle-hud">
+      <span>HEALTH <b id="kc-health">100</b></span>
+      <span>AMMO <b id="kc-ammo">8 / 8</b></span>
+      <span>ALLIES <b id="kc-allies">10</b></span>
+      <span>ENEMIES <b id="kc-enemies">10</b></span>
+      <span>SHIELD <b id="kc-shield">STOWED</b></span>
+    </div>
+    <div id="kc-objective">Advance along the road · Capture the red flag</div>
     <div id="center-mark" aria-hidden="true"></div>
     <section id="start-screen" class="overlay">
       <div class="panel">
-        <p class="eyebrow">THE TRAINING GROUNDS</p>
+        <p class="eyebrow">THE WESTERN FRONT · 1916</p>
         <h1>Kingdom Clash</h1>
-        <p class="subtitle">A first-person medieval battlefield.</p>
-        <p class="description">Explore the keep, test the commander's movement, and get familiar with the world. The battlefield awaits beyond the training grounds.</p>
-        <button id="start-button">ENTER THE COURTYARD</button>
+        <p class="subtitle">A first-person World War I frontline game.</p>
+        <p class="description">Join your squad on a muddy road between two bases. Advance with your allies, defend yourself with a portable armor shield, and capture the opposing flag.</p>
+        <button id="start-button">ENTER THE FRONT LINE</button>
         <p class="hint">Mouse look activates after you enter. Press Esc to pause.</p>
       </div>
     </section>
     <section id="pause-screen" class="overlay hidden">
       <div class="panel compact">
-        <p class="eyebrow">GAME PAUSED</p>
-        <h2>Take a breather, Commander.</h2>
+        <p class="eyebrow">GAME PAUSED</p><h2>Regroup, Commander.</h2>
         <button id="resume-button">RESUME</button>
+      </div>
+    </section>
+    <section id="kc-result" class="hidden">
+      <div class="panel">
+        <p class="eyebrow">FRONTLINE SECURED</p><h2>Victory!</h2>
+        <p class="description">Your team captured the opposing base.</p>
+        <button id="kc-restart">PLAY AGAIN</button>
       </div>
     </section>
     <div id="status" role="status">Ready</div>
