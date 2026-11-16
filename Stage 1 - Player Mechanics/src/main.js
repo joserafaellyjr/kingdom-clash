@@ -505,13 +505,14 @@ document.querySelectorAll("[data-class]").forEach(button=>button.addEventListene
   document.querySelector("#kc-class").textContent=chosen.name.toUpperCase();
   classScreen.classList.add("hidden");deployScreen.classList.remove("hidden");updateHud();
 }));
-document.querySelector("#deploy-button").addEventListener("click",()=>{
+window.__kcStartBattle = () => {
   gameActive=true;
   startScreen.classList.add("hidden");classScreen.classList.add("hidden");deployScreen.classList.add("hidden");pauseScreen.classList.add("hidden");
   game.classList.add("playing");
   statusText("Battle started · Click the game to enable mouse look");
   try { controls.lock(); } catch (error) { fallbackLook=true; statusText("Battle started · Mouse look unavailable; use WASD"); }
-});
+};
+document.querySelector("#deploy-button").addEventListener("click",window.__kcStartBattle);
 document.querySelector("#resume-button").addEventListener("click",()=>{
   pauseScreen.classList.add("hidden");gameActive=true;
   try { controls.lock(); } catch (error) { fallbackLook=true;statusText("Resumed · Use WASD"); }
