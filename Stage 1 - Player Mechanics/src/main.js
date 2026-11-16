@@ -484,6 +484,10 @@ window.addEventListener("mouseup",e=>{
   if(e.button===2){playerState.aiming=false;camera.fov=74;camera.updateProjectionMatrix();weapon.position.set(0,0,0);}
 });
 window.addEventListener("contextmenu",e=>e.preventDefault());
+document.addEventListener("pointerlockerror",()=>{
+  fallbackLook=true;
+  statusText("Battle started · Mouse look unavailable; use WASD and move the mouse to look");
+});
 controls.addEventListener("lock",()=>{
   fallbackLook=false;
   startScreen.classList.add("hidden");classScreen.classList.add("hidden");deployScreen.classList.add("hidden");pauseScreen.classList.add("hidden");game.classList.add("playing");
