@@ -243,7 +243,7 @@ function soldierCombat(delta,now){
       s.parts.leftLeg.rotation.x=0;s.parts.rightLeg.rotation.x=0;
       s.cooldown-=delta;
       if(s.cooldown<=0){
-        s.cooldown=(playerState.classId==="officer"&&s.team==="blue"?1.25:1.6)+Math.random()*.9;
+        const officerBoost=playerState.classId==="officer"&&s.team==="blue"&&s.group.position.distanceTo(camera.position)<18;\n        s.cooldown=(officerBoost?1.25:1.6)+Math.random()*.9;
         const from=s.group.position.clone().add(new THREE.Vector3(0,1.35,0));
         const to=target.group.position.clone().add(new THREE.Vector3(0,1.25,0));
         makeTracer(from,to,s.team==="blue"?0x9ecbff:0xffb19a);
