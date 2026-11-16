@@ -9,7 +9,7 @@ const resultScreen = $("#result-screen");
 const message = $("#message");
 const objectiveText = $("#objective-text");
 const timerText = $("#timer");
-const healthText = $("#health");
+const guardsText = $("#guards");
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9aaeb1);
 scene.fog = new THREE.Fog(0x9aaeb1, 42, 125);
@@ -124,15 +124,15 @@ sword.position.set(.62,-.57,-1.12);sword.rotation.set(-.22,-.3,.18);camera.add(s
 const keys=new Set();
 const worldUp=new THREE.Vector3(0,1,0);
 let verticalSpeed=0,canJump=true,lastTime=performance.now();
-const player={health:100,time:180,remaining:3,capture:0,won:false,ended:false};
+const player={time:180,remaining:3,capture:0,won:false,ended:false};
 let attackReady=true,attackMotion=0,swordStart=null;
 const PLAYER_HEIGHT=1.7,GRAVITY=24,JUMP=7.8;
 const bounds={minX:-38,maxX:38,minZ:-39,maxZ:30};
 function resetBattle(){
-  player.health=100;player.time=180;player.remaining=3;player.capture=0;player.won=false;player.ended=false;
+  player.time=180;player.remaining=3;player.capture=0;player.won=false;player.ended=false;
   targets.forEach(t=>{t.hp=3;t.alive=true;t.group.visible=true;t.bar.scale.x=1;t.bar.position.x=0;});
   camera.position.set(0,1.7,24);verticalSpeed=0;canJump=true;attackReady=true;attackMotion=0;
-  timerText.textContent="03:00";healthText.textContent="100 HP";
+  timerText.textContent="03:00";guardsText.textContent="3 LEFT";
   objectiveText.textContent="Clear the opposing line";message.textContent="The battle has begun";
   resultScreen.classList.add("hidden");startScreen.classList.add("hidden");pauseScreen.classList.add("hidden");
 }
@@ -161,7 +161,7 @@ function strike(){
     best.hp--;const ratio=best.hp/best.maxHp;
     best.bar.scale.x=Math.max(.001,ratio);best.bar.position.x=-(1-ratio)*.6;
     if(best.hp<=0){
-      best.alive=false;best.group.visible=false;player.remaining--;
+      best.alive=false;best.group.visible=false;player.remaining--;guardsText.textContent=player.remaining+" LEFT";
       message.textContent="Opposing guard cleared · "+player.remaining+" remaining";
       if(player.remaining===0){objectiveText.textContent="Capture the central standard";message.textContent="The line is clear. Secure the standard!";}
     }else message.textContent="Strike landed · "+best.hp+" guard strength remaining";
