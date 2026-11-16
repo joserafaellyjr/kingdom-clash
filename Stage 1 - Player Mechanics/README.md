@@ -1,28 +1,25 @@
 # Stage 1 — Player Mechanics
 
-**Status: Complete**
-
-## Goal
-Deliver a polished first-person foundation for the commander.
+**Status: Complete — shared foundation for all later stages**
 
 ## Included
 - First-person camera with mouse look and pointer-lock pause/resume.
 - WASD movement, sprinting, jumping, and grounded movement.
 - Basic collision against courtyard walls, towers, buildings, barrels, and training props.
-- Camera movement feedback while walking and sprinting.
-- A detailed 3D medieval keep courtyard with stone paving, battlements, towers, timber hall, banners, torches, trees, and distant hills.
-- Atmospheric lighting, shadows, fog, and a responsive HUD.
-- Main-menu link to Stage 2 Battle Mode.
+- Detailed medieval keep courtyard with stone paving, battlements, towers, timber hall, banners, torches, trees, and distant hills.
+- Atmospheric lighting, shadows, fog, and responsive HUD.
+
+Stage 2 is loaded into this same scene and uses this same commander and movement system. There is no separate Stage 2 game launch.
 
 ## Controls
-
 | Input | Action |
 |---|---|
 | W / A / S / D | Move |
 | Mouse | Look around |
 | Shift | Sprint |
 | Space | Jump |
+| E | Muster for battle near the red standard |
+| Left click | Sword strike during battle |
 | Esc | Release mouse / pause |
 
-## Notes
-Stage 1 is the movement and world foundation. Combat, battle objectives, enemy AI, currency, recruitment, equipment, XP, and multiplayer are handled by later stages. Three.js is loaded from jsDelivr, so an internet connection is required.
+Three.js is loaded from jsDelivr, so an internet connection is required.
