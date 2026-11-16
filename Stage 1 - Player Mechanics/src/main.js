@@ -127,6 +127,23 @@ function flagBase(x,z,color,label){
 }
 const friendlyBase=flagBase(0,61,0x426b91,"BLUE BASE");
 const enemyBase=flagBase(0,-61,0x9a4a40,"RED BASE");
+const frontlineObjectives=[
+  {name:"A",label:"FORWARD TRENCH",z:24,x:0,captured:false,progress:0},
+  {name:"B",label:"CROSSROADS",z:-5,x:0,captured:false,progress:0},
+  {name:"C",label:"REAR BUNKER",z:-34,x:0,captured:false,progress:0}
+];
+let activeObjective=0;
+for(const objective of frontlineObjectives){
+  const ring=new THREE.Mesh(new THREE.RingGeometry(5.2,5.65,48),new THREE.MeshBasicMaterial({color:0xc6b58d,transparent:true,opacity:.62,side:THREE.DoubleSide}));
+  ring.rotation.x=-Math.PI/2;ring.position.set(objective.x,.07,objective.z);scene.add(ring);
+  const pole=cylinder(scene,objective.x,2.1,objective.z,.07,.07,4.2,materials.metal,8);
+  const banner=new THREE.Mesh(new THREE.PlaneGeometry(1.5,1),mat(0xb69a67));
+  banner.position.set(objective.x+.72,3.35,objective.z);scene.add(banner);
+  const marker=new THREE.Mesh(new THREE.CircleGeometry(5.15,48),new THREE.MeshBasicMaterial({color:0xc6b58d,transparent:true,opacity:.08,side:THREE.DoubleSide}));
+  marker.rotation.x=-Math.PI/2;marker.position.set(objective.x,.045,objective.z);scene.add(marker);
+  objective.ring=ring;objective.banner=banner;objective.marker=marker;
+}
+
 // Distant low hills and sparse broken tree silhouettes.
 for(let i=0;i<16;i++){
   const x=-95+i*12, z=-88-(i%3)*9;
@@ -306,7 +323,7 @@ function soldierCombat(delta,now){
   for(const s of soldiers){
     if(!s.alive)continue;
     const target=nearestOpponent(s), objectiveZ=s.team==="blue"?-23:23;
-    const toObjective=new THREE.Vector3((s.index%5-2)*1.7,0,objectiveZ-s.group.position.z);
+    const frontlineZ=frontlineObjectives[Math.min(activeObjective,frontlineObjectives.length-1)].z;\n    const squadObjectiveZ=s.team==="blue"?frontlineZ:Math.min(61,frontlineZ+13);\n    const toObjective=new THREE.Vector3((s.index%5-2)*1.7,0,squadObjectiveZ-s.group.position.z);
     if(toObjective.lengthSq()>.01)toObjective.normalize();
     const separation=new THREE.Vector3();
     for(const ally of alive(s.team)){
@@ -355,19 +372,42 @@ function playerIncomingDamage(delta){
   if(playerState.health<=0){playerState.health=100;statusText("You regrouped at base");camera.position.set(0,1.7,7);updateHud();}
 }
 function captureUpdate(delta){
-  if(alive("red").length>0){playerState.capture=0;return;}
-  const distance=Math.hypot(camera.position.x-enemyBase.pole.position.x,camera.position.z+61);
-  if(distance<5){
-    playerState.capture+=delta;
-    document.querySelector("#kc-objective").textContent="CAPTURING ENEMY FLAG · "+Math.min(100,Math.floor(playerState.capture/8*100))+"%";
-    if(playerState.capture>=8){
-      playerState.won=true;statusText("Victory · Enemy flag captured");
+  if(activeObjective>=frontlineObjectives.length)return;
+  const objective=frontlineObjectives[activeObjective];
+  const distance=Math.hypot(camera.position.x-objective.x,camera.position.z-objective.z);
+  const defenders=alive("red").filter(s=>s.group.position.distanceTo(new THREE.Vector3(objective.x,0,objective.z))<8);
+  const allies=alive("blue").filter(s=>s.group.position.distanceTo(new THREE.Vector3(objective.x,0,objective.z))<9);
+  const inZone=distance<6.5;
+  const contested=defenders.length>0;
+  if(inZone&&!contested){
+    const supportBonus=Math.min(allies.length,4)*.12;
+    objective.progress=Math.min(7,objective.progress+delta*(1+supportBonus));
+  }else if(contested){
+    objective.progress=Math.max(0,objective.progress-delta*.3);
+  }else{
+    objective.progress=Math.max(0,objective.progress-delta*.65);
+  }
+  const percent=Math.floor(objective.progress/7*100);
+  objective.ring.material.color.set(contested?0xb65c50:0xd5bd83);
+  objective.ring.material.opacity=.55+percent/250;
+  objective.banner.material.color.set(contested?0x9a4a40:(inZone?0x6f9b76:0xb69a67));
+  document.querySelector("#kc-objective").textContent=contested
+    ? "SECTOR "+objective.name+" CONTESTED · "+percent+"%"
+    : "SECTOR "+objective.name+" · "+objective.label+" · "+percent+"%";
+  if(objective.progress>=7){
+    objective.captured=true;
+    objective.banner.material.color.set(0x557c9b);
+    objective.ring.material.color.set(0x6e9db7);
+    objective.ring.material.opacity=.9;
+    activeObjective++;
+    playerState.capture=0;
+    if(activeObjective>=frontlineObjectives.length){
+      playerState.won=true;statusText("Victory · All frontline sectors secured");
       document.querySelector("#kc-result").classList.remove("hidden");
       controls.unlock();
+    }else{
+      statusText("Sector "+objective.name+" secured · Advance to sector "+frontlineObjectives[activeObjective].name);
     }
-  }else{
-    playerState.capture=Math.max(0,playerState.capture-delta*.5);
-    document.querySelector("#kc-objective").textContent="Enemy line cleared · Capture the red flag";
   }
 }
 function updateMovement(delta){
