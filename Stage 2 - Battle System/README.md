@@ -1,36 +1,28 @@
 # Stage 2 — Battle System
 
-**Status: Playable foundation complete**
+**Status: Integrated into the main game**
 
-## Goal
-Create a complete first battle loop: enter the field, clear the opposing training line, capture the standard, and win before time runs out.
+Stage 2 is not a separate game or launch button. Its systems are loaded into the Stage 1 courtyard and use the same commander, camera, controls, and world.
 
-## Included
-- Separate first-person battle arena.
-- Blue commander side versus red opposing side.
-- Click-to-swing sword with cooldown and hit detection.
-- Three stylized opposing training guards with health bars. They are stationary in this stage; movement and combat AI are Stage 3.
-- Commander health, battle timer, and objective progress.
-- Clear the opposing line, then hold the central capture area to secure the standard.
-- Victory and defeat screens with a restart option.
-- Non-graphic, arcade-style combat feedback.
+## How to begin
+1. Launch Kingdom Clash from the main game page.
+2. Enter the courtyard and follow the path toward the red standard near the training hall.
+3. When the prompt appears, press **E** to muster for battle.
+
+## Battle loop
+- Three stationary opposing guards appear in the courtyard.
+- Left-click to swing the commander's sword; each guard takes three hits.
+- After clearing the guards, enter the golden capture circle and hold it for eight seconds.
+- A three-minute timer limits the battle.
+- Victory and defeat screens let the player retry or return to the courtyard.
 
 ## Controls
+- **WASD** — move
+- **Mouse** — look
+- **Shift** — sprint
+- **Space** — jump
+- **E** — begin battle near the red standard
+- **Left click** — sword strike during battle
+- **Esc** — pause / release mouse
 
-| Input | Action |
-|---|---|
-| W / A / S / D | Move |
-| Mouse | Look |
-| Shift | Sprint |
-| Space | Jump |
-| Left click | Sword strike |
-| Esc | Pause / release mouse |
-
-## Battle rules
-1. Strike each of the three red training guards three times to clear the line.
-2. Enter the marked capture zone and remain inside it for 8 seconds.
-3. Win by securing the standard before the 3-minute timer expires.
-4. The timer reaching zero is a defeat.
-
-## Stage boundary
-Enemy guards are stationary target units in Stage 2. Enemy pathfinding, attacks, formations, and commander AI are intentionally reserved for Stage 3. This keeps the battle rules separate from opponent intelligence.
+Enemy movement, attacks, formations, and commander AI are Stage 3.
