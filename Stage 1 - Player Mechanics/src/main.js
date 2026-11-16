@@ -7,6 +7,8 @@ const pauseScreen = document.querySelector("#pause-screen");
 const classScreen = document.querySelector("#class-screen");
 const deployScreen = document.querySelector("#deploy-screen");
 const status = document.querySelector("#status");
+let gameActive = false;
+let fallbackLook = false;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9aa7a2);
 scene.fog = new THREE.FogExp2(0x8e9992, 0.009);
@@ -300,7 +302,7 @@ function damageSoldier(s,amount){
   if(s.hp<=0){s.alive=false;s.group.visible=false;}
 }
 function fire(){
-  if(!controls.isLocked||playerState.reloading||playerState.won)return;
+  if(!gameActive||playerState.reloading||playerState.won)return;
   if(playerState.ammo<=0){statusText("Out of ammo · Press R to reload");return;}
   playerState.ammo--; updateHud();
   showMuzzleFlash();
@@ -316,7 +318,7 @@ function fire(){
   updateHud();
 }
 function reload(){
-  if(!controls.isLocked||playerState.reloading||playerState.ammo===playerState.maxAmmo)return;
+  if(!gameActive||playerState.reloading||playerState.ammo===playerState.maxAmmo)return;
   playerState.reloading=true;updateHud();statusText("Reloading...");
   setTimeout(()=>{playerState.ammo=playerState.maxAmmo;playerState.reloading=false;updateHud();statusText("Ready");},playerState.reloadMs);
 }
@@ -430,7 +432,7 @@ function captureUpdate(delta){
   }
 }
 function updateMovement(delta){
-  if(!controls.isLocked)return;
+  if(!gameActive)return;
   const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();
   const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();
   const direction=new THREE.Vector3();
@@ -447,7 +449,7 @@ function updateMovement(delta){
   }
 }
 window.addEventListener("keydown",e=>{
-  if(e.code==="ShiftLeft"||e.code==="ShiftRight"){if(!e.repeat)toggleShield();e.preventDefault();return;}
+  if(e.code==="ShiftLeft"||e.code==="ShiftRight"){if(gameActive&&!e.repeat)toggleShield();e.preventDefault();return;}
   if(e.code==="KeyW"){
     const now=performance.now();
     if(now-playerState.lastW<330)playerState.sprinting=true;
@@ -462,8 +464,20 @@ window.addEventListener("keyup",e=>{
   if(e.code==="KeyW")playerState.sprinting=false;
 });
 window.addEventListener("blur",()=>{keys.clear();playerState.sprinting=false;});
+window.addEventListener("mousemove",e=>{
+  if(!gameActive||controls.isLocked||!fallbackLook)return;
+  camera.rotation.order="YXZ";
+  camera.rotation.y-=e.movementX*.0022;
+  camera.rotation.x-=e.movementY*.0022;
+  camera.rotation.x=THREE.MathUtils.clamp(camera.rotation.x,-Math.PI/2+.05,Math.PI/2-.05);
+});
+game.addEventListener("click",()=>{
+  if(gameActive&&!controls.isLocked){
+    try { controls.lock(); } catch (error) { fallbackLook=true; }
+  }
+});
 window.addEventListener("mousedown",e=>{
-  if(e.button===0)fire();
+  if(e.button===0&&gameActive)fire();
   if(e.button===2){playerState.aiming=true;camera.fov=52;camera.updateProjectionMatrix();weapon.position.set(-.08,-.01,-.03);}
 });
 window.addEventListener("mouseup",e=>{
@@ -471,12 +485,13 @@ window.addEventListener("mouseup",e=>{
 });
 window.addEventListener("contextmenu",e=>e.preventDefault());
 controls.addEventListener("lock",()=>{
+  fallbackLook=false;
   startScreen.classList.add("hidden");classScreen.classList.add("hidden");deployScreen.classList.add("hidden");pauseScreen.classList.add("hidden");game.classList.add("playing");
   statusText("Hold the line · Advance toward the red flag");
 });
 controls.addEventListener("unlock",()=>{
   keys.clear();playerState.sprinting=false;game.classList.remove("playing");
-  if(!startScreen.classList.contains("hidden")||!classScreen.classList.contains("hidden"))return;
+  if(!gameActive||playerState.won)return;
   pauseScreen.classList.remove("hidden");statusText("Paused");
 });
 document.querySelector("#start-button").addEventListener("click",()=>{startScreen.classList.add("hidden");classScreen.classList.remove("hidden");});
@@ -486,15 +501,24 @@ document.querySelectorAll("[data-class]").forEach(button=>button.addEventListene
   document.querySelector("#kc-class").textContent=chosen.name.toUpperCase();
   classScreen.classList.add("hidden");deployScreen.classList.remove("hidden");updateHud();
 }));
-document.querySelector("#deploy-button").addEventListener("click",()=>{statusText("Entering frontline...");controls.lock();});
-document.querySelector("#resume-button").addEventListener("click",()=>controls.lock());
+document.querySelector("#deploy-button").addEventListener("click",()=>{
+  gameActive=true;
+  startScreen.classList.add("hidden");classScreen.classList.add("hidden");deployScreen.classList.add("hidden");pauseScreen.classList.add("hidden");
+  game.classList.add("playing");
+  statusText("Battle started · Click the game to enable mouse look");
+  try { controls.lock(); } catch (error) { fallbackLook=true; statusText("Battle started · Mouse look unavailable; use WASD"); }
+});
+document.querySelector("#resume-button").addEventListener("click",()=>{
+  pauseScreen.classList.add("hidden");gameActive=true;
+  try { controls.lock(); } catch (error) { fallbackLook=true;statusText("Resumed · Use WASD"); }
+});
 document.querySelector("#kc-restart").addEventListener("click",()=>location.reload());
 
 function animate(now){
   requestAnimationFrame(animate);
   const delta=Math.min((now-(animate.last||now))/1000,.05);animate.last=now;
   updateMovement(delta);
-  if(controls.isLocked&&!playerState.won){
+  if(gameActive&&!playerState.won){
     soldierCombat(delta,now);playerIncomingDamage(delta);captureUpdate(delta);
   }
   updateAtmosphere(delta);
@@ -506,7 +530,7 @@ function animate(now){
     flashGlow.scale.set(1.25+(.11-flashTime)*7,.8+(.11-flashTime)*4,1.6);
   }
   const moving=keys.has("KeyW")||keys.has("KeyA")||keys.has("KeyS")||keys.has("KeyD");
-  if(controls.isLocked){
+  if(gameActive){
     const bob=moving?Math.sin(now*.012)*(playerState.sprinting ? .045 : .022):0;
     camera.position.y=1.7+bob;
     weapon.position.y=bob*.75;
