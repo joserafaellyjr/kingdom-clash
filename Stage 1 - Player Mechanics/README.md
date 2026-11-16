@@ -11,7 +11,7 @@
 - A muddy battlefield road between blue and red flag bases.
 - Ten friendly and ten opposing soldier models.
 - Simple squad movement and abstract arcade combat behavior.
-- Health, ammunition, squad counts, and a flag-capture objective.
+- Pre-match selection of six roles: Rifleman, Medic, Engineer, Support, Scout, and Officer.\n- Class perks that affect player health, movement, ammunition, reload time, and nearby squad support.\n- Health, ammunition, squad counts, and a flag-capture objective.
 
 ## Controls
 | Input | Action |
