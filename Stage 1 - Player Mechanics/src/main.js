@@ -340,7 +340,9 @@ function soldierCombat(delta,now){
   for(const s of soldiers){
     if(!s.alive)continue;
     const target=nearestOpponent(s), objectiveZ=s.team==="blue"?-23:23;
-    const frontlineZ=frontlineObjectives[Math.min(activeObjective,frontlineObjectives.length-1)].z;\n    const squadObjectiveZ=s.team==="blue"?frontlineZ:Math.min(61,frontlineZ+13);\n    const toObjective=new THREE.Vector3((s.index%5-2)*1.7,0,squadObjectiveZ-s.group.position.z);
+    const frontlineZ=frontlineObjectives[Math.min(activeObjective,frontlineObjectives.length-1)].z;
+    const squadObjectiveZ=s.team==="blue"?frontlineZ:Math.min(61,frontlineZ+13);
+    const toObjective=new THREE.Vector3((s.index%5-2)*1.7,0,squadObjectiveZ-s.group.position.z);
     if(toObjective.lengthSq()>.01)toObjective.normalize();
     const separation=new THREE.Vector3();
     for(const ally of alive(s.team)){
