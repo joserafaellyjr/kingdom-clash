@@ -12,6 +12,7 @@ scene.fog = new THREE.FogExp2(0x8e9992, 0.009);
 
 const camera = new THREE.PerspectiveCamera(74, innerWidth / innerHeight, 0.1, 260);
 camera.position.set(0, 1.7, 7);
+scene.add(camera);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
 renderer.setSize(innerWidth, innerHeight);
@@ -162,7 +163,21 @@ box(weapon,.34,-.34,-.72,.16,.17,.7,materials.wood);
 box(weapon,.34,-.25,-.98,.12,.12,.65,materials.metal);
 box(weapon,.34,-.43,-.66,.12,.3,.15,materials.wood);
 box(weapon,.34,-.16,-.62,.08,.1,.22,materials.metal);
+
 weapon.position.set(0,0,0);
+// Bright, short-lived arcade flash attached to the visible first-person prop.
+const muzzleFlash=new THREE.Group();camera.add(muzzleFlash);
+const flashCore=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0,depthWrite:false}));
+flashCore.scale.set(1.2,.8,1.8);flashCore.position.set(.34,-.27,-1.43);muzzleFlash.add(flashCore);
+const flashGlow=new THREE.Mesh(new THREE.SphereGeometry(.27,10,8),new THREE.MeshBasicMaterial({color:0xff9a43,transparent:true,opacity:0,depthWrite:false}));
+flashGlow.scale.set(1.25,.8,1.6);flashGlow.position.copy(flashCore.position);muzzleFlash.add(flashGlow);
+let flashTime=0;
+function showMuzzleFlash(){
+  flashTime=.11;
+  flashCore.material.opacity=.95;flashGlow.material.opacity=.58;
+  flashCore.scale.set(1.2,.8,1.8);flashGlow.scale.set(1.25,.8,1.6);
+}
+
 const sleeveMat=mat(0x3c4a42), gloveMat=mat(0x302f2a);
 const leftSleeve=box(weapon,-.12,-.48,-.48,.24,.3,.48,sleeveMat); leftSleeve.rotation.z=-.28;
 const rightSleeve=box(weapon,.48,-.5,-.48,.24,.3,.48,sleeveMat); rightSleeve.rotation.z=.24;
@@ -287,6 +302,7 @@ function fire(){
   if(!controls.isLocked||playerState.reloading||playerState.won)return;
   if(playerState.ammo<=0){statusText("Out of ammo · Press R to reload");return;}
   playerState.ammo--; updateHud();
+  showMuzzleFlash();
   raycaster.setFromCamera(center,camera);
   const targets=alive("red").map(s=>s.group);
   const hits=raycaster.intersectObjects(targets,true);
@@ -478,6 +494,13 @@ function animate(now){
     soldierCombat(delta,now);playerIncomingDamage(delta);captureUpdate(delta);
   }
   updateAtmosphere(delta);
+  if(flashTime>0){
+    flashTime=Math.max(0,flashTime-delta);
+    const fade=flashTime/.11;
+    flashCore.material.opacity=.95*fade;flashGlow.material.opacity=.58*fade;
+    flashCore.scale.set(1.2+(.11-flashTime)*5,.8+(.11-flashTime)*3,1.8);
+    flashGlow.scale.set(1.25+(.11-flashTime)*7,.8+(.11-flashTime)*4,1.6);
+  }
   const moving=keys.has("KeyW")||keys.has("KeyA")||keys.has("KeyS")||keys.has("KeyD");
   if(controls.isLocked){
     const bob=moving?Math.sin(now*.012)*(playerState.sprinting ? .045 : .022):0;
