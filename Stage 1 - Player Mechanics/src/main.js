@@ -80,6 +80,30 @@ for(const side of [-1,1]){
   // Long shallow trench bank.
   box(scene,side*14,-.15,0,2,.7,116,materials.mud2,false);
 }
+const timber=mat(0x493a2b), timberLight=mat(0x68513a), darkEarth=mat(0x403c33);
+for(const side of [-1,1]){
+  for(let i=0;i<18;i++){
+    const z=-66+i*7.5;
+    box(scene,side*9.15,.48,z,.18,1.15,.22,timber);
+    box(scene,side*9.15,1.02,z,.26,.12,7.4,timberLight);
+    box(scene,side*9.15,.08,z,.2,.16,7.4,darkEarth,false);
+  }
+  for(let i=0;i<44;i++){
+    const z=-67+i*3.1;
+    box(scene,side*12.9,.12,z,1.8,.16,2.55,i%3===0?timberLight:timber,false);
+  }
+}
+for(let i=0;i<34;i++){
+  const x=(Math.random()-.5)*34,z=(Math.random()-.5)*126;
+  const plank=box(scene,x,.12,z,.18+Math.random()*.18,.12,1.2+Math.random()*2,timberLight,false);
+  plank.rotation.y=Math.random()*Math.PI;
+}
+for(let i=0;i<18;i++){
+  const x=(Math.random()-.5)*40,z=(Math.random()-.5)*130;
+  const mound=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),darkEarth);
+  mound.scale.set(1.3+Math.random()*1.5,.25+Math.random()*.25,1.1+Math.random());
+  mound.position.set(x,.03,z);mound.receiveShadow=true;scene.add(mound);
+}
 function crater(x,z,r){
   const rim=new THREE.Mesh(new THREE.TorusGeometry(r,.28,7,20),materials.mud2);
   rim.rotation.x=Math.PI/2; rim.position.set(x,.08,z); rim.scale.y=.72; scene.add(rim);
@@ -145,6 +169,11 @@ function makeSoldier(team,x,z,index){
   const head=cylinder(group,0,1.78,0,.22,.23,.38,materials.skin,10);
   const helmet=cylinder(group,0,1.99,0,.29,.3,.2,materials.helmet,10);
   const brim=cylinder(group,0,1.91,0,.34,.34,.06,materials.helmet,12);
+  box(group,0,1.2,.27,.42,.55,.2,trim);
+  box(group,0,1.3,-.213,.12,.7,.025,materials.sandDark);
+  box(group,0,.91,-.01,.76,.1,.44,materials.sandDark);
+  box(group,-.34,.91,-.02,.16,.2,.18,trim);
+  box(group,.34,.91,-.02,.16,.2,.18,trim);
   const leftArm=box(group,-.48,1.18,0,.2,.72,.22,uniform); leftArm.rotation.z=-.12;
   const rightArm=box(group,.48,1.18,0,.2,.72,.22,uniform); rightArm.rotation.z=.12;
   const leftLeg=box(group,-.2,.42,0,.24,.72,.27,trim);
@@ -289,7 +318,8 @@ function soldierCombat(delta,now){
     if(target){targetVector.subVectors(target.group.position,s.group.position);distance=targetVector.length();if(distance>.01)targetVector.normalize();}
     if(target&&distance<=12){
       s.group.rotation.y=Math.atan2(targetVector.x,targetVector.z);
-      s.parts.leftLeg.rotation.x=0;s.parts.rightLeg.rotation.x=0;s.cooldown-=delta;
+      s.parts.leftLeg.rotation.x=0;s.parts.rightLeg.rotation.x=0;
+      s.parts.leftArm.rotation.x=0;s.parts.rightArm.rotation.x=0;s.cooldown-=delta;
       if(s.cooldown<=0){
         const officerBoost=playerState.classId==="officer"&&s.team==="blue"&&s.group.position.distanceTo(camera.position)<18;
         s.cooldown=(officerBoost?1.25:1.6)+Math.random()*.9;
@@ -304,7 +334,9 @@ function soldierCombat(delta,now){
         move.normalize();s.group.position.addScaledVector(move,(s.team==="blue"?1.55:1.42)*delta);
         s.group.rotation.y=Math.atan2(move.x,move.z);
       }
-      s.step+=delta*6.5;s.parts.leftLeg.rotation.x=Math.sin(s.step)*.38;s.parts.rightLeg.rotation.x=-Math.sin(s.step)*.38;
+      s.step+=delta*6.5;
+      s.parts.leftLeg.rotation.x=Math.sin(s.step)*.38;s.parts.rightLeg.rotation.x=-Math.sin(s.step)*.38;
+      s.parts.leftArm.rotation.x=-Math.sin(s.step)*.2;s.parts.rightArm.rotation.x=Math.sin(s.step)*.2;
     }
     s.group.position.x=THREE.MathUtils.clamp(s.group.position.x,-19,19);
     s.group.position.z=THREE.MathUtils.clamp(s.group.position.z,-65,65);
@@ -406,6 +438,14 @@ function animate(now){
     soldierCombat(delta,now);playerIncomingDamage(delta);captureUpdate(delta);
   }
   updateAtmosphere(delta);
+  const moving=keys.has("KeyW")||keys.has("KeyA")||keys.has("KeyS")||keys.has("KeyD");
+  if(controls.isLocked){
+    const bob=moving?Math.sin(now*.012)*(playerState.sprinting ? .045 : .022):0;
+    camera.position.y=1.7+bob;
+    weapon.position.y=bob*.75;
+  }
+  friendlyBase.cloth.rotation.y=Math.sin(now*.0012)*.09;
+  enemyBase.cloth.rotation.y=Math.sin(now*.0011+1)*.09;
   updateHud();
   renderer.render(scene,camera);
 }
