@@ -249,7 +249,7 @@ function playerIncomingDamage(delta){
   const attacker=threats[0];
   const toward=new THREE.Vector3().subVectors(attacker.group.position,camera.position).normalize();
   const facing=new THREE.Vector3();camera.getWorldDirection(facing);
-  const shieldBlocks=playerState.shield&&facing.dot(toward)<-.12;
+  const shieldBlocks=playerState.shield&&facing.dot(toward)>.12;
   if(!shieldBlocks)playerState.health=Math.max(0,playerState.health-2.2*delta*threats.length);
   updateHud();
   if(playerState.health<=0){playerState.health=100;statusText("You regrouped at base");camera.position.set(0,1.7,7);updateHud();}
