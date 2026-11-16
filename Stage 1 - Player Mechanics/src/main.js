@@ -8,7 +8,7 @@ const classScreen = document.querySelector("#class-screen");
 const status = document.querySelector("#status");
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9aa7a2);
-scene.fog = new THREE.FogExp2(0x9aa7a2, 0.0065);
+scene.fog = new THREE.FogExp2(0x8e9992, 0.009);
 
 const camera = new THREE.PerspectiveCamera(74, innerWidth / innerHeight, 0.1, 260);
 camera.position.set(0, 1.7, 7);
@@ -122,6 +122,13 @@ box(weapon,.34,-.25,-.98,.12,.12,.65,materials.metal);
 box(weapon,.34,-.43,-.66,.12,.3,.15,materials.wood);
 box(weapon,.34,-.16,-.62,.08,.1,.22,materials.metal);
 weapon.position.set(0,0,0);
+const sleeveMat=mat(0x3c4a42), gloveMat=mat(0x302f2a);
+const leftSleeve=box(weapon,-.12,-.48,-.48,.24,.3,.48,sleeveMat); leftSleeve.rotation.z=-.28;
+const rightSleeve=box(weapon,.48,-.5,-.48,.24,.3,.48,sleeveMat); rightSleeve.rotation.z=.24;
+const leftGlove=new THREE.Mesh(new THREE.SphereGeometry(.12,10,8),gloveMat);
+leftGlove.position.set(-.1,-.34,-.68);weapon.add(leftGlove);
+const rightGlove=new THREE.Mesh(new THREE.SphereGeometry(.12,10,8),gloveMat);
+rightGlove.position.set(.43,-.34,-.72);weapon.add(rightGlove);
 const shield=new THREE.Group(); camera.add(shield);
 const shieldPlate=box(shield,-.53,-.28,-.82,.86,1.15,.12,materials.metal);
 shieldPlate.material=mat(0x59605b,.42,.7);
@@ -183,10 +190,45 @@ function updateHud(){
   document.querySelector("#kc-shield").textContent=playerState.shield?"DEPLOYED":"STOWED";
   document.querySelector("#kc-class").textContent=classDefinitions[playerState.classId].name.toUpperCase();
 }
-function makeTracer(from,to,color=0xffd28a){
-  const geometry=new THREE.BufferGeometry().setFromPoints([from,to]);
-  const line=new THREE.Line(geometry,new THREE.LineBasicMaterial({color,transparent:true,opacity:.9}));
-  scene.add(line); setTimeout(()=>{scene.remove(line);geometry.dispose();line.material.dispose();},110);
+const hazeCount=260;
+const hazePositions=new Float32Array(hazeCount*3), hazeDrift=[];
+for(let i=0;i<hazeCount;i++){
+  hazePositions[i*3]=(Math.random()-.5)*150;
+  hazePositions[i*3+1]=.5+Math.random()*13;
+  hazePositions[i*3+2]=(Math.random()-.5)*150;
+  hazeDrift.push({x:(Math.random()-.5)*.65,y:.04+Math.random()*.16,z:(Math.random()-.5)*.3});
+}
+const hazeGeometry=new THREE.BufferGeometry();
+hazeGeometry.setAttribute("position",new THREE.BufferAttribute(hazePositions,3));
+const haze=new THREE.Points(hazeGeometry,new THREE.PointsMaterial({color:0xc1b8a2,size:.22,transparent:true,opacity:.22,depthWrite:false}));
+scene.add(haze);
+const dustBursts=[];
+function spawnDust(position,tint=0xaaa18e){
+  const group=new THREE.Group();group.position.copy(position);scene.add(group);
+  const bits=[];
+  for(let i=0;i<11;i++){
+    const bit=new THREE.Mesh(new THREE.SphereGeometry(.09+Math.random()*.12,6,5),new THREE.MeshBasicMaterial({color:tint,transparent:true,opacity:.52,depthWrite:false}));
+    bit.position.set((Math.random()-.5)*.65,Math.random()*.35,(Math.random()-.5)*.65);
+    group.add(bit);bits.push({mesh:bit,velocity:new THREE.Vector3((Math.random()-.5)*1.4,.55+Math.random()*1.2,(Math.random()-.5)*1.4)});
+  }
+  dustBursts.push({group,bits,age:0});
+}
+function updateAtmosphere(delta){
+  const p=hazeGeometry.attributes.position;
+  for(let i=0;i<hazeCount;i++){
+    const d=hazeDrift[i];
+    p.array[i*3]+=d.x*delta;p.array[i*3+1]+=d.y*delta;p.array[i*3+2]+=d.z*delta;
+    if(p.array[i*3+1]>14){p.array[i*3+1]=.5;p.array[i*3]=(Math.random()-.5)*150;p.array[i*3+2]=(Math.random()-.5)*150;}
+  }
+  p.needsUpdate=true;
+  for(let i=dustBursts.length-1;i>=0;i--){
+    const burst=dustBursts[i];burst.age+=delta;
+    for(const bit of burst.bits){
+      bit.mesh.position.addScaledVector(bit.velocity,delta);bit.velocity.y-=.18*delta;
+      bit.mesh.material.opacity=Math.max(0,.52-burst.age*.48);bit.mesh.scale.multiplyScalar(1+delta*.45);
+    }
+    if(burst.age>1.1){scene.remove(burst.group);burst.bits.forEach(b=>{b.mesh.geometry.dispose();b.mesh.material.dispose();});dustBursts.splice(i,1);}
+  }
 }
 function damageSoldier(s,amount){
   if(!s.alive)return;
@@ -206,8 +248,8 @@ function fire(){
     let obj=hits[0].object;
     while(obj.parent&&!soldiers.some(s=>s.group===obj))obj=obj.parent;
     const target=soldiers.find(s=>s.group===obj);
-    if(target){damageSoldier(target,50);statusText("Hit confirmed");}
-  }else statusText("Shot fired");
+    if(target){damageSoldier(target,50);spawnDust(hits[0].point,0xb9a98b);statusText("Hit confirmed");}
+  }else {spawnDust(camera.position.clone().add(new THREE.Vector3(0,-.4,-5).applyQuaternion(camera.quaternion)),0xa99f8b);statusText("Shot fired");}
   updateHud();
 }
 function reload(){
@@ -226,31 +268,46 @@ function nearestOpponent(s){
   return best;
 }
 function soldierCombat(delta,now){
+  medicTick+=delta;
+  if(playerState.classId==="medic"&&medicTick>=2){
+    medicTick=0;
+    const nearby=alive("blue").filter(s=>s.group.position.distanceTo(camera.position)<16&&s.hp<s.maxHp);
+    nearby.forEach(s=>{s.hp=Math.min(s.maxHp,s.hp+5);const ratio=s.hp/s.maxHp;s.hpFill.scale.x=Math.max(.001,ratio);s.hpFill.position.x=-(1-ratio)*.43;});
+  }
   for(const s of soldiers){
     if(!s.alive)continue;
-    const target=nearestOpponent(s); if(!target)continue;
-    const dx=target.group.position.x-s.group.position.x,dz=target.group.position.z-s.group.position.z;
-    const distance=Math.hypot(dx,dz);
-    s.group.rotation.y=Math.atan2(dx,dz);
-    if(distance>12){
-      const speed=s.team==="blue"?1.65:1.35;
-      s.group.position.x+=dx/distance*speed*delta;
-      s.group.position.z+=dz/distance*speed*delta;
-      s.step+=delta*7;
-      s.parts.leftLeg.rotation.x=Math.sin(s.step)*.45;
-      s.parts.rightLeg.rotation.x=-Math.sin(s.step)*.45;
-    }else{
-      s.parts.leftLeg.rotation.x=0;s.parts.rightLeg.rotation.x=0;
-      s.cooldown-=delta;
-      if(s.cooldown<=0){
-        const officerBoost=playerState.classId==="officer"&&s.team==="blue"&&s.group.position.distanceTo(camera.position)<18;\n        s.cooldown=(officerBoost?1.25:1.6)+Math.random()*.9;
-        const from=s.group.position.clone().add(new THREE.Vector3(0,1.35,0));
-        const to=target.group.position.clone().add(new THREE.Vector3(0,1.25,0));
-        makeTracer(from,to,s.team==="blue"?0x9ecbff:0xffb19a);
-        damageSoldier(target,8);
-        if(target.team==="blue"&&target.hp<=0)updateHud();
-      }
+    const target=nearestOpponent(s), objectiveZ=s.team==="blue"?-23:23;
+    const toObjective=new THREE.Vector3((s.index%5-2)*1.7,0,objectiveZ-s.group.position.z);
+    if(toObjective.lengthSq()>.01)toObjective.normalize();
+    const separation=new THREE.Vector3();
+    for(const ally of alive(s.team)){
+      if(ally===s)continue;
+      const offset=new THREE.Vector3().subVectors(s.group.position,ally.group.position),d=offset.length();
+      if(d>.01&&d<2.7)separation.addScaledVector(offset.normalize(),(2.7-d)/2.7);
     }
+    const targetVector=new THREE.Vector3();let distance=Infinity;
+    if(target){targetVector.subVectors(target.group.position,s.group.position);distance=targetVector.length();if(distance>.01)targetVector.normalize();}
+    if(target&&distance<=12){
+      s.group.rotation.y=Math.atan2(targetVector.x,targetVector.z);
+      s.parts.leftLeg.rotation.x=0;s.parts.rightLeg.rotation.x=0;s.cooldown-=delta;
+      if(s.cooldown<=0){
+        const officerBoost=playerState.classId==="officer"&&s.team==="blue"&&s.group.position.distanceTo(camera.position)<18;
+        s.cooldown=(officerBoost?1.25:1.6)+Math.random()*.9;
+        spawnDust(target.group.position.clone().add(new THREE.Vector3(0,1.1,0)),s.team==="blue"?0xaab9bf:0xbda69a);
+        damageSoldier(target,8);if(target.team==="blue"&&target.hp<=0)updateHud();
+      }
+    }else{
+      const move=new THREE.Vector3();
+      if(target&&distance>.1)move.addScaledVector(targetVector,.55);
+      move.addScaledVector(toObjective,.48).addScaledVector(separation,1.25);
+      if(move.lengthSq()>.001){
+        move.normalize();s.group.position.addScaledVector(move,(s.team==="blue"?1.55:1.42)*delta);
+        s.group.rotation.y=Math.atan2(move.x,move.z);
+      }
+      s.step+=delta*6.5;s.parts.leftLeg.rotation.x=Math.sin(s.step)*.38;s.parts.rightLeg.rotation.x=-Math.sin(s.step)*.38;
+    }
+    s.group.position.x=THREE.MathUtils.clamp(s.group.position.x,-19,19);
+    s.group.position.z=THREE.MathUtils.clamp(s.group.position.z,-65,65);
   }
 }
 function playerIncomingDamage(delta){
@@ -331,7 +388,13 @@ controls.addEventListener("unlock",()=>{
   if(!startScreen.classList.contains("hidden")||!classScreen.classList.contains("hidden"))return;
   pauseScreen.classList.remove("hidden");statusText("Paused");
 });
-document.querySelector("#start-button").addEventListener("click",()=>{startScreen.classList.add("hidden");classScreen.classList.remove("hidden");});\ndocument.querySelectorAll("[data-class]").forEach(button=>button.addEventListener("click",()=>{\n  const id=button.dataset.class,chosen=classDefinitions[id];\n  playerState.classId=id;playerState.health=chosen.health;playerState.maxHealth=chosen.health;playerState.ammo=chosen.ammo;playerState.maxAmmo=chosen.ammo;playerState.speed=chosen.speed;playerState.reloadMs=chosen.reloadMs;\n  document.querySelector("#kc-class").textContent=chosen.name.toUpperCase();\n  classScreen.classList.add("hidden");updateHud();controls.lock();\n}));
+document.querySelector("#start-button").addEventListener("click",()=>{startScreen.classList.add("hidden");classScreen.classList.remove("hidden");});
+document.querySelectorAll("[data-class]").forEach(button=>button.addEventListener("click",()=>{
+  const id=button.dataset.class,chosen=classDefinitions[id];
+  playerState.classId=id;playerState.health=chosen.health;playerState.maxHealth=chosen.health;playerState.ammo=chosen.ammo;playerState.maxAmmo=chosen.ammo;playerState.speed=chosen.speed;playerState.reloadMs=chosen.reloadMs;
+  document.querySelector("#kc-class").textContent=chosen.name.toUpperCase();
+  classScreen.classList.add("hidden");updateHud();controls.lock();
+}));
 document.querySelector("#resume-button").addEventListener("click",()=>controls.lock());
 document.querySelector("#kc-restart").addEventListener("click",()=>location.reload());
 
@@ -342,6 +405,7 @@ function animate(now){
   if(controls.isLocked&&!playerState.won){
     soldierCombat(delta,now);playerIncomingDamage(delta);captureUpdate(delta);
   }
+  updateAtmosphere(delta);
   updateHud();
   renderer.render(scene,camera);
 }
