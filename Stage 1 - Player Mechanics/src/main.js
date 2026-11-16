@@ -120,6 +120,74 @@ function crate(x,z){
   for(let y=.18;y<1.2;y+=.82) box(scene,x,y,z-.67,1.15,.08,.06,materials.sandDark);
 }
 [[-8,9],[8,25],[-17,-4],[17,-30]].forEach(([x,z])=>crate(x,z));
+
+/* Expanded battlefield landmarks: communication trenches, dugouts and a ruined village.
+   These are visual navigation spaces; they do not change real-world tactics. */
+function communicationTrench(x1,z1,x2,z2){
+  const dx=x2-x1,dz=z2-z1,length=Math.hypot(dx,dz);
+  const angle=Math.atan2(dx,dz),midX=(x1+x2)/2,midZ=(z1+z2)/2;
+  const channel=box(scene,midX,-.12,midZ,length,.42,2.8,materials.mud2,false);
+  channel.rotation.y=angle;
+  for(const side of [-1,1]){
+    const offsetX=Math.cos(angle)*side*1.55,offsetZ=-Math.sin(angle)*side*1.55;
+    const berm=box(scene,midX+offsetX,.25,midZ+offsetZ,length,.72,.65,darkEarth,false);
+    berm.rotation.y=angle;
+    const cap=box(scene,midX+offsetX,.62,midZ+offsetZ,length,.13,.72,materials.sand,false);
+    cap.rotation.y=angle;
+  }
+  const count=Math.max(3,Math.floor(length/2.4));
+  for(let i=0;i<count;i++){
+    const t=(i+.5)/count;
+    const px=x1+dx*t,pz=z1+dz*t;
+    const board=box(scene,px,.12,pz,1.45,.12,.55,timberLight,false);
+    board.rotation.y=angle;
+  }
+}
+communicationTrench(-19,39,-11,31);
+communicationTrench(-11,31,-18,18);
+communicationTrench(-18,18,-10,8);
+communicationTrench(19,39,11,31);
+communicationTrench(11,31,18,18);
+communicationTrench(18,18,10,8);
+communicationTrench(-19,-12,-11,-20);
+communicationTrench(-11,-20,-18,-34);
+communicationTrench(19,-12,11,-20);
+communicationTrench(11,-20,18,-34);
+
+function ruinedBuilding(x,z,rotation=0){
+  const ruin=new THREE.Group();ruin.position.set(x,0,z);ruin.rotation.y=rotation;scene.add(ruin);
+  const stone=mat(0x777568),broken=mat(0x625f55),interior=mat(0x373a34);
+  box(ruin,0,.12,0,8,.24,6,interior,false);
+  box(ruin,-3.7,1.45,0,.55,2.9,6,stone);
+  box(ruin,3.7,1.1,-.65,.55,2.2,4.7,broken);
+  box(ruin,-.8,1.25,-2.75,5.8,2.5,.5,stone);
+  box(ruin,2.4,.9,2.72,2.5,1.8,.5,broken);
+  box(ruin,-2.4,2.65,-2.7,2.8,.22,.55,broken).rotation.z=.12;
+  box(ruin,1.5,2.05,-2.7,2.2,.2,.5,stone).rotation.z=-.2;
+  for(let i=0;i<9;i++){
+    const rubble=box(ruin,(Math.random()-.5)*7,.25+Math.random()*.18,(Math.random()-.5)*5,.35+Math.random()*.8,.35,.35+Math.random()*.8,i%2?stone:broken,false);
+    rubble.rotation.y=Math.random()*Math.PI;
+  }
+  return ruin;
+}
+ruinedBuilding(-18,-18,.18);
+ruinedBuilding(18,9,-.22);
+ruinedBuilding(-17,48,-.12);
+
+function dugout(x,z,rotation=0){
+  const shelter=new THREE.Group();shelter.position.set(x,0,z);shelter.rotation.y=rotation;scene.add(shelter);
+  box(shelter,0,.18,0,5,.36,4,materials.wood);
+  for(const side of [-1,1]){
+    box(shelter,side*2.25,1.15,0,.35,2.1,4.1,timber);
+    box(shelter,0,1.1,side*1.85,4.8,2,.35,timber);
+  }
+  box(shelter,0,2.2,0,5.3,.35,4.5,darkEarth);
+  box(shelter,0,1.05,-1.92,1.5,1.9,.18,materials.mud);
+  return shelter;
+}
+dugout(-15,27,.08);
+dugout(15,-28,Math.PI-.08);
+
 function flagBase(x,z,color,label){
   const pole=cylinder(scene,x,3,z,.09,.09,6,materials.metal,8);
   const cloth=new THREE.Mesh(new THREE.PlaneGeometry(2.2,1.5),mat(color));
