@@ -1,3 +1,4 @@
+import { createBattleSystem } from "./battle.js";
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 
@@ -25,6 +26,7 @@ game.prepend(renderer.domElement);
 
 const controls = new PointerLockControls(camera, renderer.domElement);
 controls.pointerSpeed = 0.78;
+const battleSystem = createBattleSystem({ THREE, scene, camera, controls, status });
 
 scene.add(new THREE.HemisphereLight(0xdcecff, 0x655744, 1.8));
 const sun = new THREE.DirectionalLight(0xffe3b5, 2.5);
@@ -316,6 +318,7 @@ function animate(now) {
   const delta = Math.min((now - lastTime) / 1000, 0.05);
   lastTime = now;
   updateMovement(delta);
+  battleSystem.update(delta, now);
   torchLights.forEach(({ flame, light, phase }) => {
     const flicker = Math.sin(now * 0.009 + phase) * 0.12 + Math.sin(now * 0.017 + phase) * 0.08;
     flame.scale.y = 1 + flicker;
