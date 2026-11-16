@@ -1,36 +1,38 @@
 # Kingdom Clash
 
-A browser-based 3D medieval battlefield game built with JavaScript and Three.js.
+A browser-based 3D first-person World War I frontline game built with JavaScript and Three.js.
 
-## Project direction
-- First-person only; the player is a battlefield commander.
-- Historically inspired medieval setting (roughly 900–1200 AD, with creative flexibility).
-- Battles and conquest are the focus, not kingdom management.
-- Hybrid gameplay: personally fight and command troops.
-- Single-player first; multiplayer comes later.
+## Current direction
+- World War I setting with a muddy road between two flag bases.
+- First-person commander gameplay.
+- Visible first-person weapon prop and a deployable portable armor shield.
+- Friendly and opposing soldiers physically present in the same world and engaging each other with simple arcade-style game logic.
+- Capture the opposing flag after clearing the opposing team.
+- Single-player foundation first; multiplayer and progression come later.
+
+## Current controls
+| Input | Action |
+|---|---|
+| W / A / S / D | Move |
+| Double-tap W | Sprint while W is held |
+| Mouse | Look |
+| Left click | Fire |
+| Right click (hold) | Aim down sights |
+| R | Reload |
+| Shift | Deploy / retract portable armor shield |
+| Esc | Pause / release mouse |
+
+The shield stays deployed until Shift is pressed again. Movement is slower while it is deployed.
 
 ## Development roadmap
-1. **Player Mechanics** — first-person movement, camera, controls, and commander. **Complete**
-2. **Battle System** — combat and objectives integrated into the same courtyard and commander. **Integrated playable foundation**
-3. **NPC Opponents** — enemy AI, soldiers, and enemy commanders.
-4. **Coins and Recruitment** — start with 10 soldiers; earn battle coins and recruit more.
-5. **Equipment Shops** — buy commander gear individually and army gear by entire unit.
-6. **Commander XP** — separate experience, levels, and progression rewards.
-7. **Multiplayer** — online battles against other players.
-8. **Additional Content** — maps, units, weapons, armor, and battle types.
-
-## Current stages
-- [Stage 1 — Player Mechanics](Stage%201%20-%20Player%20Mechanics/README.md): the shared world and commander foundation.
-- [Stage 2 — Battle System](Stage%202%20-%20Battle%20System/README.md): combat and objectives added directly to the Stage 1 world. There is one game entry point, not separate stage games.
+1. **Player mechanics** — first-person movement, visible equipment, aiming, shield, and controls.
+2. **Battlefield and combat foundation** — road, opposing bases, squads, simple combat behavior, and capture objective.
+3. **Improved NPCs** — better soldier models, squad behavior, and battlefield roles.
+4. **Coins and recruitment** — start with 10 soldiers; earn battle coins and recruit more.
+5. **Equipment progression** — commander and squad equipment.
+6. **Commander XP** — separate experience, levels, and rewards.
+7. **Multiplayer** — online battles.
+8. **Additional content** — maps, squads, objectives, and game modes.
 
 ## Run the game
-Open the project through a local web server (for example, VS Code Live Server), then open `Stage 1 - Player Mechanics/index.html`. Stage 2 begins inside the same world: walk toward the red standard near the training hall and press E when prompted. Three.js is loaded from a CDN, so an internet connection is required.
-
-### Controls
-- **WASD** — move
-- **Mouse** — look
-- **Shift** — sprint
-- **Space** — jump
-- **E** — muster for battle near the red standard
-- **Left click** — sword strike during battle
-- **Esc** — pause / release mouse
+Open `Stage 1 - Player Mechanics/index.html` through a local web server (for example, VS Code Live Server), or use the GitHub Pages site. Three.js loads from a CDN, so an internet connection is required.
