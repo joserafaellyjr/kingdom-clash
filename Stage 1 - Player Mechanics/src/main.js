@@ -257,10 +257,10 @@ function updateMovement(delta) {
   if (keys.has("KeyD")) moveDirection.x += 1;
   moveDirection.normalize();
 
-  const player = controls.getObject();
+  const player = camera;
   if (moveDirection.lengthSq() > 0) {
     const forward = new THREE.Vector3();
-    controls.getDirection(forward);
+    camera.getWorldDirection(forward);
     forward.y = 0;
     forward.normalize();
     const right = new THREE.Vector3().crossVectors(forward, worldUp);
