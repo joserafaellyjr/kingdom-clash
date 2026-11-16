@@ -4,6 +4,7 @@ import { PointerLockControls } from "three/addons/controls/PointerLockControls.j
 const game = document.querySelector("#game");
 const startScreen = document.querySelector("#start-screen");
 const pauseScreen = document.querySelector("#pause-screen");
+const classScreen = document.querySelector("#class-screen");
 const status = document.querySelector("#status");
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9aa7a2);
@@ -159,7 +160,16 @@ for(let i=0;i<10;i++){
   const x=((i%5)-2)*2.5, z=-39-Math.floor(i/5)*3.4;
   makeSoldier("red",x,z,i);
 }
-const playerState={health:100,ammo:8,maxAmmo:8,reloading:false,shield:false,aiming:false,sprinting:false,lastW:0,capture:0,won:false};
+const playerState={health:100,maxHealth:100,ammo:8,maxAmmo:8,reloading:false,shield:false,aiming:false,sprinting:false,lastW:0,capture:0,won:false,classId:"rifleman",reloadMs:1500,speed:5.8};
+const classDefinitions={
+  rifleman:{name:"Rifleman",description:"Balanced frontline soldier. A reliable all-rounder.",health:100,ammo:8,speed:5.8,reloadMs:1500},
+  medic:{name:"Medic",description:"Keeps nearby friendly soldiers in the fight with gradual squad healing.",health:105,ammo:7,speed:5.6,reloadMs:1600},
+  engineer:{name:"Engineer",description:"Sturdier frontline defender with extra personal health.",health:125,ammo:7,speed:5.2,reloadMs:1700},
+  support:{name:"Support",description:"Carries a larger game-ammo supply before reloading.",health:105,ammo:12,speed:5.1,reloadMs:1900},
+  scout:{name:"Scout",description:"Fast-moving role with lighter protection.",health:85,ammo:6,speed:7.1,reloadMs:1400},
+  officer:{name:"Officer",description:"Helps nearby friendly troops stay coordinated and fight more effectively.",health:100,ammo:8,speed:5.8,reloadMs:1500}
+};
+let medicTick=0;
 const keys=new Set();
 const raycaster=new THREE.Raycaster();
 const center=new THREE.Vector2(0,0);
@@ -171,6 +181,7 @@ function updateHud(){
   document.querySelector("#kc-allies").textContent=alive("blue").length;
   document.querySelector("#kc-enemies").textContent=alive("red").length;
   document.querySelector("#kc-shield").textContent=playerState.shield?"DEPLOYED":"STOWED";
+  document.querySelector("#kc-class").textContent=classDefinitions[playerState.classId].name.toUpperCase();
 }
 function makeTracer(from,to,color=0xffd28a){
   const geometry=new THREE.BufferGeometry().setFromPoints([from,to]);
@@ -202,7 +213,7 @@ function fire(){
 function reload(){
   if(!controls.isLocked||playerState.reloading||playerState.ammo===playerState.maxAmmo)return;
   playerState.reloading=true;updateHud();statusText("Reloading...");
-  setTimeout(()=>{playerState.ammo=playerState.maxAmmo;playerState.reloading=false;updateHud();statusText("Ready");},1500);
+  setTimeout(()=>{playerState.ammo=playerState.maxAmmo;playerState.reloading=false;updateHud();statusText("Ready");},playerState.reloadMs);
 }
 function toggleShield(){
   playerState.shield=!playerState.shield;shield.visible=playerState.shield;
@@ -232,7 +243,7 @@ function soldierCombat(delta,now){
       s.parts.leftLeg.rotation.x=0;s.parts.rightLeg.rotation.x=0;
       s.cooldown-=delta;
       if(s.cooldown<=0){
-        s.cooldown=1.6+Math.random()*1.1;
+        s.cooldown=(playerState.classId==="officer"&&s.team==="blue"?1.25:1.6)+Math.random()*.9;
         const from=s.group.position.clone().add(new THREE.Vector3(0,1.35,0));
         const to=target.group.position.clone().add(new THREE.Vector3(0,1.25,0));
         makeTracer(from,to,s.team==="blue"?0x9ecbff:0xffb19a);
@@ -281,7 +292,7 @@ function updateMovement(delta){
   if(keys.has("KeyA"))direction.sub(right);
   if(direction.lengthSq()>0){
     direction.normalize();
-    const speed=playerState.sprinting?10:playerState.shield?3.7:5.8;
+    const speed=(playerState.sprinting?playerState.speed*1.65:playerState.speed)*(playerState.shield?.64:1);
     camera.position.addScaledVector(direction,speed*delta);
     camera.position.x=THREE.MathUtils.clamp(camera.position.x,-22,22);
     camera.position.z=THREE.MathUtils.clamp(camera.position.z,-72,72);
@@ -317,10 +328,10 @@ controls.addEventListener("lock",()=>{
 });
 controls.addEventListener("unlock",()=>{
   keys.clear();playerState.sprinting=false;game.classList.remove("playing");
-  if(!startScreen.classList.contains("hidden"))return;
+  if(!startScreen.classList.contains("hidden")||!classScreen.classList.contains("hidden"))return;
   pauseScreen.classList.remove("hidden");statusText("Paused");
 });
-document.querySelector("#start-button").addEventListener("click",()=>controls.lock());
+document.querySelector("#start-button").addEventListener("click",()=>{startScreen.classList.add("hidden");classScreen.classList.remove("hidden");});\ndocument.querySelectorAll("[data-class]").forEach(button=>button.addEventListener("click",()=>{\n  const id=button.dataset.class,chosen=classDefinitions[id];\n  playerState.classId=id;playerState.health=chosen.health;playerState.maxHealth=chosen.health;playerState.ammo=chosen.ammo;playerState.maxAmmo=chosen.ammo;playerState.speed=chosen.speed;playerState.reloadMs=chosen.reloadMs;\n  document.querySelector("#kc-class").textContent=chosen.name.toUpperCase();\n  classScreen.classList.add("hidden");updateHud();controls.lock();\n}));
 document.querySelector("#resume-button").addEventListener("click",()=>controls.lock());
 document.querySelector("#kc-restart").addEventListener("click",()=>location.reload());
 
