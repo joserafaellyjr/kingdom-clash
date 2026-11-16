@@ -31,5 +31,6 @@ Open the project through a local web server (for example, VS Code Live Server), 
 - **Mouse** — look
 - **Shift** — sprint
 - **Space** — jump
-- **Left click** — sword strike in Stage 2
+- **E** — muster for battle near the red standard
+- **Left click** — sword strike during battle
 - **Esc** — pause / release mouse
