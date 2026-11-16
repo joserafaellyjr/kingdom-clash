@@ -219,8 +219,13 @@ function makeSoldier(team,x,z,index){
   box(group,.16,1.13,-.87,.07,.07,.22,materials.metal);
   const hpBack=box(group,0,2.28,0,.9,.09,.06,materials.red2,false);
   const hpFill=box(group,0,2.28,.04,.86,.055,.025,mat(0x78a66c),false);
+  const role=team==="blue"&&index===4?"medic":"rifle";
+  if(role==="medic"){
+    box(group,-.37,1.37,.12,.12,.25,.045,mat(0xd9d3bd),false);
+    box(group,-.37,1.37,.15,.045,.17,.025,mat(0x9a4a40),false);
+  }
   const soldier={team,group,hp:100,maxHp:100,alive:true,cooldown:1+Math.random()*1.4,
-    hpFill,index,step:Math.random()*6,parts:{leftLeg,rightLeg,leftArm,rightArm},target:null};
+    hpFill,index,role,step:Math.random()*6,parts:{leftLeg,rightLeg,leftArm,rightArm},target:null};
   soldiers.push(soldier); return soldier;
 }
 for(let i=0;i<10;i++){
@@ -241,6 +246,8 @@ const classDefinitions={
   officer:{name:"Officer",description:"Helps nearby friendly troops stay coordinated and fight more effectively.",health:100,ammo:8,speed:5.8,reloadMs:1500}
 };
 let medicTick=0;
+let aiMedicTick=0;
+let rallyMode=false;
 const keys=new Set();
 const raycaster=new THREE.Raycaster();
 const center=new THREE.Vector2(0,0);
@@ -339,12 +346,31 @@ function soldierCombat(delta,now){
     const nearby=alive("blue").filter(s=>s.group.position.distanceTo(camera.position)<16&&s.hp<s.maxHp);
     nearby.forEach(s=>{s.hp=Math.min(s.maxHp,s.hp+5);const ratio=s.hp/s.maxHp;s.hpFill.scale.x=Math.max(.001,ratio);s.hpFill.position.x=-(1-ratio)*.43;});
   }
+  // Friendly squad medics periodically restore a little health to nearby allies.
+  aiMedicTick+=delta;
+  if(aiMedicTick>=2.5){
+    aiMedicTick=0;
+    for(const medic of alive("blue").filter(s=>s.role==="medic")){
+      for(const ally of alive("blue")){
+        if(ally!==medic&&ally.hp<ally.maxHp&&ally.group.position.distanceTo(medic.group.position)<7){
+          ally.hp=Math.min(ally.maxHp,ally.hp+4);
+          const ratio=ally.hp/ally.maxHp;
+          ally.hpFill.scale.x=Math.max(.001,ratio);
+          ally.hpFill.position.x=-(1-ratio)*.43;
+        }
+      }
+    }
+  }
   for(const s of soldiers){
     if(!s.alive)continue;
-    const target=nearestOpponent(s), objectiveZ=s.team==="blue"?-23:23;
-    const frontlineZ=frontlineObjectives[Math.min(activeObjective,frontlineObjectives.length-1)].z;
-    const squadObjectiveZ=s.team==="blue"?frontlineZ:Math.min(61,frontlineZ+13);
-    const toObjective=new THREE.Vector3((s.index%5-2)*1.7,0,squadObjectiveZ-s.group.position.z);
+    const target=nearestOpponent(s);
+    const objective=frontlineObjectives[Math.min(activeObjective,frontlineObjectives.length-1)];
+    const lane=(s.index%5)-2;
+    const slotX=THREE.MathUtils.clamp(objective.x+lane*2.7,-15,15);
+    const rallyPoint=s.team==="blue"&&rallyMode
+      ? new THREE.Vector3(camera.position.x+lane*2.2,0,camera.position.z+5+Math.floor(s.index/5)*2.5)
+      : new THREE.Vector3(slotX,0,objective.z+(s.team==="red"?-5:5)+Math.floor(s.index/5)*2.5);
+    const toObjective=new THREE.Vector3().subVectors(rallyPoint,s.group.position);
     if(toObjective.lengthSq()>.01)toObjective.normalize();
     const separation=new THREE.Vector3();
     for(const ally of alive(s.team)){
@@ -399,10 +425,12 @@ function captureUpdate(delta){
   const defenders=alive("red").filter(s=>s.group.position.distanceTo(new THREE.Vector3(objective.x,0,objective.z))<8);
   const allies=alive("blue").filter(s=>s.group.position.distanceTo(new THREE.Vector3(objective.x,0,objective.z))<9);
   const inZone=distance<6.5;
+  const squadInZone=allies.length>0;
   const contested=defenders.length>0;
-  if(inZone&&!contested){
-    const supportBonus=Math.min(allies.length,4)*.12;
-    objective.progress=Math.min(7,objective.progress+delta*(1+supportBonus));
+  if((inZone||squadInZone)&&!contested){
+    const supportBonus=Math.min(allies.length,5)*.16;
+    const commanderBonus=inZone ? .35 : 0;
+    objective.progress=Math.min(7,objective.progress+delta*(1+supportBonus+commanderBonus));
   }else if(contested){
     objective.progress=Math.max(0,objective.progress-delta*.3);
   }else{
@@ -414,7 +442,7 @@ function captureUpdate(delta){
   objective.banner.material.color.set(contested?0x9a4a40:(inZone?0x6f9b76:0xb69a67));
   document.querySelector("#kc-objective").textContent=contested
     ? "SECTOR "+objective.name+" CONTESTED · "+percent+"%"
-    : "SECTOR "+objective.name+" · "+objective.label+" · "+percent+"%";
+    : "SECTOR "+objective.name+" · "+objective.label+" · "+percent+"%"+(squadInZone&&!inZone?" · SQUAD CAPTURING":"");
   if(objective.progress>=7){
     objective.captured=true;
     objective.banner.material.color.set(0x557c9b);
@@ -449,6 +477,11 @@ function updateMovement(delta){
   }
 }
 window.addEventListener("keydown",e=>{
+  if(e.code==="KeyG"&&gameActive&&!e.repeat){
+    rallyMode=!rallyMode;
+    statusText(rallyMode?"Squad order: regroup on your position":"Squad order: advance to the active sector");
+    return;
+  }
   if(e.code==="ShiftLeft"||e.code==="ShiftRight"){if(gameActive&&!e.repeat)toggleShield();e.preventDefault();return;}
   if(e.code==="KeyW"){
     const now=performance.now();
