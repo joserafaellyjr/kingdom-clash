@@ -5,6 +5,7 @@ const game = document.querySelector("#game");
 const startScreen = document.querySelector("#start-screen");
 const pauseScreen = document.querySelector("#pause-screen");
 const classScreen = document.querySelector("#class-screen");
+const deployScreen = document.querySelector("#deploy-screen");
 const status = document.querySelector("#status");
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9aa7a2);
@@ -468,7 +469,7 @@ window.addEventListener("mouseup",e=>{
 });
 window.addEventListener("contextmenu",e=>e.preventDefault());
 controls.addEventListener("lock",()=>{
-  startScreen.classList.add("hidden");pauseScreen.classList.add("hidden");game.classList.add("playing");
+  startScreen.classList.add("hidden");classScreen.classList.add("hidden");deployScreen.classList.add("hidden");pauseScreen.classList.add("hidden");game.classList.add("playing");
   statusText("Hold the line · Advance toward the red flag");
 });
 controls.addEventListener("unlock",()=>{
@@ -481,8 +482,9 @@ document.querySelectorAll("[data-class]").forEach(button=>button.addEventListene
   const id=button.dataset.class,chosen=classDefinitions[id];
   playerState.classId=id;playerState.health=chosen.health;playerState.maxHealth=chosen.health;playerState.ammo=chosen.ammo;playerState.maxAmmo=chosen.ammo;playerState.speed=chosen.speed;playerState.reloadMs=chosen.reloadMs;
   document.querySelector("#kc-class").textContent=chosen.name.toUpperCase();
-  classScreen.classList.add("hidden");updateHud();controls.lock();
+  classScreen.classList.add("hidden");deployScreen.classList.remove("hidden");updateHud();
 }));
+document.querySelector("#deploy-button").addEventListener("click",()=>{statusText("Entering frontline...");controls.lock();});
 document.querySelector("#resume-button").addEventListener("click",()=>controls.lock());
 document.querySelector("#kc-restart").addEventListener("click",()=>location.reload());
 
