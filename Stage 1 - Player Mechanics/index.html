@@ -36,7 +36,7 @@
       <span>AMMO <b id="kc-ammo">8 / 8</b></span>
       <span>ALLIES <b id="kc-allies">10</b></span>
       <span>ENEMIES <b id="kc-enemies">10</b></span>
-      <span>SHIELD <b id="kc-shield">STOWED</b></span>
+      <span>CLASS <b id="kc-class">RIFLEMAN</b></span>\n      <span>SHIELD <b id="kc-shield">STOWED</b></span>
     </div>
     <div id="kc-objective">Advance along the road · Capture the red flag</div>
     <div id="center-mark" aria-hidden="true"></div>
@@ -46,8 +46,23 @@
         <h1>Kingdom Clash</h1>
         <p class="subtitle">A first-person World War I frontline game.</p>
         <p class="description">Join your squad on a muddy road between two bases. Advance with your allies, defend yourself with a portable armor shield, and capture the opposing flag.</p>
-        <button id="start-button">ENTER THE FRONT LINE</button>
+        <button id="start-button">CHOOSE YOUR CLASS</button>
         <p class="hint">Mouse look activates after you enter. Press Esc to pause.</p>
+      </div>
+    </section>
+    <section id="class-screen" class="overlay hidden">
+      <div class="panel class-panel">
+        <p class="eyebrow">CHOOSE YOUR ROLE</p>
+        <h2>SELECT A CLASS</h2>
+        <p class="description">Every role has a different strength. Your choice applies for this match.</p>
+        <div class="class-grid">
+          <button class="class-card" data-class="rifleman"><strong>RIFLEMAN</strong><small>Balanced frontline role</small><span>100 HP · 8 rounds</span></button>
+          <button class="class-card" data-class="medic"><strong>MEDIC</strong><small>Gradually heals nearby allies</small><span>105 HP · 7 rounds</span></button>
+          <button class="class-card" data-class="engineer"><strong>ENGINEER</strong><small>Extra personal health</small><span>125 HP · 7 rounds</span></button>
+          <button class="class-card" data-class="support"><strong>SUPPORT</strong><small>Larger ammo supply</small><span>105 HP · 12 rounds</span></button>
+          <button class="class-card" data-class="scout"><strong>SCOUT</strong><small>Faster movement</small><span>85 HP · 6 rounds</span></button>
+          <button class="class-card" data-class="officer"><strong>OFFICER</strong><small>Nearby allies attack faster</small><span>100 HP · 8 rounds</span></button>
+        </div>
       </div>
     </section>
     <section id="pause-screen" class="overlay hidden">
