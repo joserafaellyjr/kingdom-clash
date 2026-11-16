@@ -236,7 +236,6 @@ const worldUp = new THREE.Vector3(0, 1, 0);
 let verticalSpeed = 0;
 let canJump = true;
 let lastTime = performance.now();
-let bobTime = 0;
 const PLAYER_HEIGHT = 1.7;
 const WALK_SPEED = 6.2;
 const SPRINT_SPEED = 9.5;
@@ -275,10 +274,6 @@ function updateMovement(delta) {
     const nextZ = THREE.MathUtils.clamp(player.position.z + displacement.z, bounds.minZ, bounds.maxZ);
     if (!blocked(nextX, player.position.z)) player.position.x = nextX;
     if (!blocked(player.position.x, nextZ)) player.position.z = nextZ;
-    bobTime += delta * (sprinting ? 15 : 10);
-    camera.position.y = PLAYER_HEIGHT + Math.sin(bobTime) * (sprinting ? 0.055 : 0.028);
-  } else {
-    camera.position.y = THREE.MathUtils.damp(camera.position.y, PLAYER_HEIGHT, 10, delta);
   }
 
   verticalSpeed -= GRAVITY * delta;
