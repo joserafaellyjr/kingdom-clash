@@ -307,7 +307,7 @@ for(let i=0;i<10;i++){
   const x=((i%5)-2)*2.5, z=-39-Math.floor(i/5)*3.4;
   makeSoldier("red",x,z,i);
 }
-const playerState={health:100,maxHealth:100,lastDamageAt:performance.now(),ammo:8,maxAmmo:8,reloading:false,shield:false,aiming:false,sprinting:false,lastW:0,capture:0,won:false,classId:"rifleman",reloadMs:1500,speed:5.8};
+const playerState={health:100,maxHealth:100,lastDamageAt:performance.now(),ammo:8,maxAmmo:8,reloading:false,shield:false,shieldDurability:100,shieldMax:100,shieldBrokenUntil:0,aiming:false,sprinting:false,lastW:0,capture:0,won:false,classId:"rifleman",reloadMs:1500,speed:5.8};
 const classDefinitions={
   rifleman:{name:"Rifleman",description:"Balanced frontline soldier. A reliable all-rounder.",health:100,ammo:8,speed:5.8,reloadMs:1500},
   medic:{name:"Medic",description:"Keeps nearby friendly soldiers in the fight with gradual squad healing.",health:105,ammo:7,speed:5.6,reloadMs:1600},
@@ -332,12 +332,31 @@ function updateHud(){
   document.querySelector("#kc-ammo").textContent=playerState.reloading?"RELOADING":playerState.ammo+" / "+playerState.maxAmmo;
   document.querySelector("#kc-allies").textContent=alive("blue").length;
   document.querySelector("#kc-enemies").textContent=alive("red").length;
-  document.querySelector("#kc-shield").textContent=playerState.shield?"DEPLOYED":"STOWED";
+  const shieldHud=document.querySelector("#kc-shield");
+  const shieldWait=Math.max(0,Math.ceil((playerState.shieldBrokenUntil-performance.now())/1000));
+  shieldHud.textContent=shieldWait>0?"BROKEN "+shieldWait+"s":(playerState.shield?"ACTIVE ":"READY ")+Math.ceil(playerState.shieldDurability)+"%";
   document.querySelector("#kc-class").textContent=classDefinitions[playerState.classId].name.toUpperCase();
 }
 // Removed drifting haze/air specks; battle visuals now come from brief impact effects.
 const dustBursts=[];
 const arcadeSparks=[];
+const arcadeBolts=[];
+function launchArcadeBolt(start,end,target=null){
+  const group=new THREE.Group();
+  const direction=new THREE.Vector3().subVectors(end,start);
+  const distance=direction.length();
+  if(distance<.05)return;
+  direction.normalize();
+  const core=new THREE.Mesh(new THREE.SphereGeometry(.105,10,8),new THREE.MeshBasicMaterial({color:0xffdf8a,emissive:0x9b5a12,emissiveIntensity:.8,depthWrite:false}));
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.025,.055,.72,7),new THREE.MeshBasicMaterial({color:0xffa94d,transparent:true,opacity:.78,depthWrite:false}));
+  tail.rotation.x=Math.PI/2;
+  group.add(core,tail);
+  group.position.copy(start);
+  group.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),direction);
+  scene.add(group);
+  arcadeBolts.push({group,start:start.clone(),end:end.clone(),target,direction,distance,travelled:0,speed:22});
+}
+
 function spawnArcadeSparks(position,tint=0xffdf8a){
   const group=new THREE.Group();group.position.copy(position);scene.add(group);
   const bits=[];
@@ -362,6 +381,25 @@ function spawnDust(position,tint=0xaaa18e){
   dustBursts.push({group,bits,age:0});
 }
 function updateAtmosphere(delta){
+  for(let i=arcadeBolts.length-1;i>=0;i--){
+    const bolt=arcadeBolts[i];
+    bolt.travelled=Math.min(bolt.distance,bolt.travelled+bolt.speed*delta);
+    const t=bolt.travelled/bolt.distance;
+    bolt.group.position.copy(bolt.start).lerp(bolt.end,t);
+    if(t>=1){
+      scene.remove(bolt.group);
+      bolt.group.children.forEach(child=>{child.geometry.dispose();child.material.dispose();});
+      if(bolt.target&&bolt.target.alive){
+        spawnArcadeSparks(bolt.end,0xffdf8a);
+        spawnDust(bolt.end,0xb9a98b);
+        damageSoldier(bolt.target,50);
+        statusText("Arcade bolt impact");
+      }else{
+        spawnDust(bolt.end,0xa99f8b);
+      }
+      arcadeBolts.splice(i,1);updateHud();
+    }
+  }
   for(let i=arcadeSparks.length-1;i>=0;i--){
     const burst=arcadeSparks[i];burst.age+=delta;
     for(const bit of burst.bits){
@@ -398,14 +436,23 @@ function fire(){
   playerState.ammo--; updateHud();
   showMuzzleFlash();
   raycaster.setFromCamera(center,camera);
+  raycaster.far=45;
   const targets=alive("red").map(s=>s.group);
   const hits=raycaster.intersectObjects(targets,true);
+  let target=null,end;
   if(hits.length){
     let obj=hits[0].object;
     while(obj.parent&&!soldiers.some(s=>s.group===obj))obj=obj.parent;
-    const target=soldiers.find(s=>s.group===obj);
-    if(target){damageSoldier(target,50);spawnArcadeSparks(hits[0].point,0xffdf8a);spawnDust(hits[0].point,0xb9a98b);statusText("Hit confirmed");}
-  }else {spawnDust(camera.position.clone().add(new THREE.Vector3(0,-.4,-5).applyQuaternion(camera.quaternion)),0xa99f8b);statusText("Shot fired");}
+    target=soldiers.find(s=>s.group===obj)||null;
+    end=hits[0].point.clone();
+  }else{
+    const direction=new THREE.Vector3();camera.getWorldDirection(direction);
+    end=camera.position.clone().addScaledVector(direction,45);
+  }
+  const direction=new THREE.Vector3();camera.getWorldDirection(direction);
+  const start=camera.position.clone().addScaledVector(direction,.9);
+  launchArcadeBolt(start,end,target);
+  statusText("Arcade bolt travelling...");
   updateHud();
 }
 function reload(){
@@ -414,8 +461,16 @@ function reload(){
   setTimeout(()=>{playerState.ammo=playerState.maxAmmo;playerState.reloading=false;updateHud();statusText("Ready");},playerState.reloadMs);
 }
 function toggleShield(){
+  const now=performance.now();
+  if(now<playerState.shieldBrokenUntil){statusText("Shield broken · Recovering");return;}
+  if(!playerState.shield&&playerState.shieldDurability<30){statusText("Shield needs more charge");return;}
   playerState.shield=!playerState.shield;shield.visible=playerState.shield;
   updateHud();statusText(playerState.shield?"Armor shield deployed":"Armor shield retracted");
+}
+function updateShield(delta,now){
+  if(!playerState.shield&&now>=playerState.shieldBrokenUntil&&playerState.shieldDurability<playerState.shieldMax){
+    playerState.shieldDurability=Math.min(playerState.shieldMax,playerState.shieldDurability+18*delta);
+  }
 }
 function nearestOpponent(s){
   const foes=alive(s.team==="blue"?"red":"blue");
@@ -500,7 +555,16 @@ function playerIncomingDamage(delta){
   const toward=new THREE.Vector3().subVectors(attacker.group.position,camera.position).normalize();
   const facing=new THREE.Vector3();camera.getWorldDirection(facing);
   const shieldBlocks=playerState.shield&&facing.dot(toward)>.12;
-  if(!shieldBlocks){playerState.health=Math.max(0,playerState.health-2.2*delta*threats.length);playerState.lastDamageAt=performance.now();}
+  if(shieldBlocks){
+    playerState.shieldDurability=Math.max(0,playerState.shieldDurability-18*delta*threats.length);
+    if(playerState.shieldDurability<=0){
+      playerState.shield=false;shield.visible=false;playerState.shieldBrokenUntil=performance.now()+8000;
+      statusText("Shield broken · Recovery takes 8 seconds");
+    }
+  }else{
+    playerState.health=Math.max(0,playerState.health-2.2*delta*threats.length);
+    playerState.lastDamageAt=performance.now();
+  }
   updateHud();
   if(playerState.health<=0){playerState.health=playerState.maxHealth;playerState.lastDamageAt=performance.now();statusText("You regrouped at base");camera.position.set(0,1.7,7);updateHud();}
 }
@@ -668,7 +732,7 @@ function animate(now){
   const delta=Math.min((now-(animate.last||now))/1000,.05);animate.last=now;
   updateMovement(delta);
   if(gameActive&&!playerState.won){
-    soldierCombat(delta,now);playerIncomingDamage(delta);updateRegeneration(delta,now);captureUpdate(delta);
+    soldierCombat(delta,now);playerIncomingDamage(delta);updateShield(delta,now);updateRegeneration(delta,now);captureUpdate(delta);
   }
   updateAtmosphere(delta);
   if(flashTime>0){
