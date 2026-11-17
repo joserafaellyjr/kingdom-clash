@@ -483,6 +483,17 @@ function updateAtmosphere(delta){
 }
 function damagePlayer(amount){
   if(!gameActive||playerState.won)return;
+  if(playerState.shield){
+    playerState.shieldDurability=Math.max(0,playerState.shieldDurability-amount*2);
+    statusText("Incoming bolt blocked by shield");
+    if(playerState.shieldDurability<=0){
+      playerState.shield=false;shield.visible=false;
+      playerState.shieldBrokenUntil=performance.now()+8000;
+      statusText("Shield depleted · Recovering");
+    }
+    updateHud();
+    return;
+  }
   playerState.health=Math.max(0,playerState.health-amount);
   playerState.lastDamageAt=performance.now();
   statusText("Direct hit · Health reduced");
