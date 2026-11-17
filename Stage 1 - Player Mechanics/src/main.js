@@ -293,7 +293,7 @@ function makeSoldier(team,x,z,index){
     box(group,-.37,1.37,.15,.045,.17,.025,mat(0x9a4a40),false);
   }
   const soldier={team,group,hp:100,maxHp:100,alive:true,cooldown:1+Math.random()*1.4,
-    hpFill,index,role,step:Math.random()*6,parts:{leftLeg,rightLeg,leftArm,rightArm},target:null};
+    hpFill,index,role,step:Math.random()*6,parts:{leftLeg,rightLeg,leftArm,rightArm},target:null,lastDamageAt:performance.now()};
   soldiers.push(soldier); return soldier;
 }
 for(let i=0;i<10;i++){
@@ -304,7 +304,7 @@ for(let i=0;i<10;i++){
   const x=((i%5)-2)*2.5, z=-39-Math.floor(i/5)*3.4;
   makeSoldier("red",x,z,i);
 }
-const playerState={health:100,maxHealth:100,ammo:8,maxAmmo:8,reloading:false,shield:false,aiming:false,sprinting:false,lastW:0,capture:0,won:false,classId:"rifleman",reloadMs:1500,speed:5.8};
+const playerState={health:100,maxHealth:100,lastDamageAt:performance.now(),ammo:8,maxAmmo:8,reloading:false,shield:false,aiming:false,sprinting:false,lastW:0,capture:0,won:false,classId:"rifleman",reloadMs:1500,speed:5.8};
 const classDefinitions={
   rifleman:{name:"Rifleman",description:"Balanced frontline soldier. A reliable all-rounder.",health:100,ammo:8,speed:5.8,reloadMs:1500},
   medic:{name:"Medic",description:"Keeps nearby friendly soldiers in the fight with gradual squad healing.",health:105,ammo:7,speed:5.6,reloadMs:1600},
@@ -329,7 +329,7 @@ function updateHud(){
   document.querySelector("#kc-shield").textContent=playerState.shield?"DEPLOYED":"STOWED";
   document.querySelector("#kc-class").textContent=classDefinitions[playerState.classId].name.toUpperCase();
 }
-const hazeCount=260;
+const hazeCount=420;
 const hazePositions=new Float32Array(hazeCount*3), hazeDrift=[];
 for(let i=0;i<hazeCount;i++){
   hazePositions[i*3]=(Math.random()-.5)*150;
@@ -339,8 +339,21 @@ for(let i=0;i<hazeCount;i++){
 }
 const hazeGeometry=new THREE.BufferGeometry();
 hazeGeometry.setAttribute("position",new THREE.BufferAttribute(hazePositions,3));
-const haze=new THREE.Points(hazeGeometry,new THREE.PointsMaterial({color:0xc1b8a2,size:.22,transparent:true,opacity:.22,depthWrite:false}));
+const haze=new THREE.Points(hazeGeometry,new THREE.PointsMaterial({color:0xd7cfbd,size:.42,transparent:true,opacity:.42,depthWrite:false,sizeAttenuation:true}));
 scene.add(haze);
+// A second, more visible layer of windblown particles crossing the battlefield.
+const airCount=190;
+const airPositions=new Float32Array(airCount*3),airVelocity=[];
+for(let i=0;i<airCount;i++){
+  airPositions[i*3]=(Math.random()-.5)*105;
+  airPositions[i*3+1]=.8+Math.random()*12;
+  airPositions[i*3+2]=(Math.random()-.5)*145;
+  airVelocity.push({x:.9+Math.random()*.8,y:(Math.random()-.5)*.12,z:-.25+Math.random()*.5});
+}
+const airGeometry=new THREE.BufferGeometry();
+airGeometry.setAttribute("position",new THREE.BufferAttribute(airPositions,3));
+const airParticles=new THREE.Points(airGeometry,new THREE.PointsMaterial({color:0xe0d5bd,size:.58,transparent:true,opacity:.48,depthWrite:false,sizeAttenuation:true}));
+scene.add(airParticles);
 const dustBursts=[];
 function spawnDust(position,tint=0xaaa18e){
   const group=new THREE.Group();group.position.copy(position);scene.add(group);
@@ -360,6 +373,19 @@ function updateAtmosphere(delta){
     if(p.array[i*3+1]>14){p.array[i*3+1]=.5;p.array[i*3]=(Math.random()-.5)*150;p.array[i*3+2]=(Math.random()-.5)*150;}
   }
   p.needsUpdate=true;
+  const air=airGeometry.attributes.position;
+  for(let i=0;i<airCount;i++){
+    const v=airVelocity[i];
+    air.array[i*3]+=v.x*delta;
+    air.array[i*3+1]+=v.y*delta;
+    air.array[i*3+2]+=v.z*delta;
+    if(air.array[i*3]>54){
+      air.array[i*3]=-54;
+      air.array[i*3+1]=.8+Math.random()*12;
+      air.array[i*3+2]=(Math.random()-.5)*145;
+    }
+  }
+  air.needsUpdate=true;
   for(let i=dustBursts.length-1;i>=0;i--){
     const burst=dustBursts[i];burst.age+=delta;
     for(const bit of burst.bits){
@@ -372,6 +398,7 @@ function updateAtmosphere(delta){
 function damageSoldier(s,amount){
   if(!s.alive)return;
   s.hp=Math.max(0,s.hp-amount);
+  s.lastDamageAt=performance.now();
   const ratio=s.hp/s.maxHp;
   s.hpFill.scale.x=Math.max(.001,ratio); s.hpFill.position.x=-(1-ratio)*.43;
   if(s.hp<=0){s.alive=false;s.group.visible=false;}
@@ -482,9 +509,9 @@ function playerIncomingDamage(delta){
   const toward=new THREE.Vector3().subVectors(attacker.group.position,camera.position).normalize();
   const facing=new THREE.Vector3();camera.getWorldDirection(facing);
   const shieldBlocks=playerState.shield&&facing.dot(toward)>.12;
-  if(!shieldBlocks)playerState.health=Math.max(0,playerState.health-2.2*delta*threats.length);
+  if(!shieldBlocks){playerState.health=Math.max(0,playerState.health-2.2*delta*threats.length);playerState.lastDamageAt=performance.now();}
   updateHud();
-  if(playerState.health<=0){playerState.health=100;statusText("You regrouped at base");camera.position.set(0,1.7,7);updateHud();}
+  if(playerState.health<=0){playerState.health=playerState.maxHealth;playerState.lastDamageAt=performance.now();statusText("You regrouped at base");camera.position.set(0,1.7,7);updateHud();}
 }
 function captureUpdate(delta){
   if(activeObjective>=frontlineObjectives.length)return;
@@ -525,6 +552,19 @@ function captureUpdate(delta){
     }else{
       statusText("Sector "+objective.name+" secured · Advance to sector "+frontlineObjectives[activeObjective].name);
     }
+  }
+}
+function updateRegeneration(delta,now){
+  // Game-only recovery begins after a short break from pressure.
+  if(playerState.health<playerState.maxHealth&&now-playerState.lastDamageAt>3500){
+    playerState.health=Math.min(playerState.maxHealth,playerState.health+5*delta);
+  }
+  for(const s of soldiers){
+    if(!s.alive||s.hp>=s.maxHp||now-s.lastDamageAt<4500)continue;
+    s.hp=Math.min(s.maxHp,s.hp+3*delta);
+    const ratio=s.hp/s.maxHp;
+    s.hpFill.scale.x=Math.max(.001,ratio);
+    s.hpFill.position.x=-(1-ratio)*.43;
   }
 }
 function updateMovement(delta){
@@ -625,7 +665,7 @@ function animate(now){
   const delta=Math.min((now-(animate.last||now))/1000,.05);animate.last=now;
   updateMovement(delta);
   if(gameActive&&!playerState.won){
-    soldierCombat(delta,now);playerIncomingDamage(delta);captureUpdate(delta);
+    soldierCombat(delta,now);playerIncomingDamage(delta);updateRegeneration(delta,now);captureUpdate(delta);
   }
   updateAtmosphere(delta);
   if(flashTime>0){
