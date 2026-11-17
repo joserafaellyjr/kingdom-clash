@@ -10,8 +10,8 @@ const status = document.querySelector("#status");
 let gameActive = false;
 let fallbackLook = false;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9aa7a2);
-scene.fog = new THREE.FogExp2(0x8e9992, 0.009);
+scene.background = new THREE.Color(0x87918d);
+scene.fog = new THREE.FogExp2(0x87918d, 0.0068);
 
 const camera = new THREE.PerspectiveCamera(74, innerWidth / innerHeight, 0.1, 260);
 camera.position.set(0, 1.7, 7);
@@ -23,27 +23,33 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.08;
+renderer.toneMappingExposure = 1.22;
+renderer.setClearColor(0x87918d);
 game.prepend(renderer.domElement);
 
 const controls = new PointerLockControls(camera, renderer.domElement);
 controls.pointerSpeed = 0.75;
-scene.add(new THREE.HemisphereLight(0xd9e4e5, 0x51463c, 1.65));
-const sun = new THREE.DirectionalLight(0xffe2bf, 2.2);
-sun.position.set(-25, 42, 18);
+scene.add(new THREE.HemisphereLight(0xdce6e5, 0x37352f, 1.25));
+const ambientFill = new THREE.DirectionalLight(0xb4c5ca, .62);
+ambientFill.position.set(30, 18, -35);
+scene.add(ambientFill);
+const sun = new THREE.DirectionalLight(0xffd7ad, 2.65);
+sun.position.set(-32, 48, 24);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -0.00018;
+sun.shadow.normalBias = .035;
 sun.shadow.camera.left = -85; sun.shadow.camera.right = 85;
 sun.shadow.camera.top = 85; sun.shadow.camera.bottom = -85;
 scene.add(sun);
 
 const mat = (color, roughness=0.95, metalness=0) => new THREE.MeshStandardMaterial({color, roughness, metalness});
 const materials = {
-  mud:mat(0x514b3f), mud2:mat(0x62594a), grass:mat(0x626b50),
-  sand:mat(0x98866a), sandDark:mat(0x76664f), wood:mat(0x594330),
-  metal:mat(0x454b4b,.55,.55), blue:mat(0x344e68), blue2:mat(0x263b50),
+  mud:mat(0x49443b), mud2:mat(0x665a49), grass:mat(0x59634d),
+  sand:mat(0xa18c6d), sandDark:mat(0x70604a), wood:mat(0x594330),
+  metal:mat(0x454b4b,.48,.62), blue:mat(0x344e68), blue2:mat(0x263b50),
   red:mat(0x77433c), red2:mat(0x59302e), skin:mat(0xb58b6a),
-  helmet:mat(0x59645c,.45,.55), boot:mat(0x302d29), cloth:mat(0xb4aa8e)
+  helmet:mat(0x59645c,.38,.58), boot:mat(0x302d29), cloth:mat(0xb4aa8e)
 };
 function box(parent,x,y,z,sx,sy,sz,material,cast=true) {
   const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),material);
@@ -107,6 +113,36 @@ for(let i=0;i<18;i++){
   const mound=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),darkEarth);
   mound.scale.set(1.3+Math.random()*1.5,.25+Math.random()*.25,1.1+Math.random());
   mound.position.set(x,.03,z);mound.receiveShadow=true;scene.add(mound);
+}
+// Scattered field dressing: stones, scrub and broken timber make the ground less empty.
+const stoneMats=[mat(0x625f55),mat(0x777365),mat(0x4d4b43)];
+for(let i=0;i<145;i++){
+  const x=(Math.random()-.5)*44,z=(Math.random()-.5)*132;
+  const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(.12+Math.random()*.28,0),stoneMats[i%stoneMats.length]);
+  stone.position.set(x,.08,z);stone.rotation.set(Math.random(),Math.random()*Math.PI,Math.random());
+  stone.scale.y=.45+Math.random()*.7;stone.castShadow=true;scene.add(stone);
+}
+const scrubMat=mat(0x424b3a);
+for(let i=0;i<95;i++){
+  const x=(Math.random()-.5)*48,z=(Math.random()-.5)*136;
+  const tuft=new THREE.Group();tuft.position.set(x,0,z);scene.add(tuft);
+  for(let j=0;j<3;j++){
+    const blade=new THREE.Mesh(new THREE.ConeGeometry(.09,.42+Math.random()*.32,4),scrubMat);
+    blade.position.set((Math.random()-.5)*.22,.2, (Math.random()-.5)*.22);
+    blade.rotation.z=(Math.random()-.5)*.7;tuft.add(blade);
+  }
+}
+// Low smoke columns and soft cloud banks give the horizon depth.
+const smokeColumns=[];
+const smokeMat=new THREE.MeshStandardMaterial({color:0x565d5a,transparent:true,opacity:.17,roughness:1,depthWrite:false});
+for(let i=0;i<9;i++){
+  const plume=new THREE.Group();plume.position.set((Math.random()-.5)*100,0,-48-Math.random()*38);scene.add(plume);
+  for(let j=0;j<5;j++){
+    const puff=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),smokeMat.clone());
+    puff.position.set((Math.random()-.5)*1.8,2+j*1.35,(Math.random()-.5)*1.4);
+    puff.scale.set(1.5+j*.35,1.3+j*.32,1.5+j*.3);plume.add(puff);
+  }
+  smokeColumns.push({plume,phase:Math.random()*6});
 }
 function crater(x,z,r){
   const rim=new THREE.Mesh(new THREE.TorusGeometry(r,.28,7,20),materials.mud2);
@@ -272,11 +308,24 @@ function makeSoldier(team,x,z,index){
   const uniform=friendly?materials.blue:materials.red;
   const trim=friendly?materials.blue2:materials.red2;
   const torso=box(group,0,1.12,0,.72,.88,.4,uniform);
-  const head=cylinder(group,0,1.78,0,.22,.23,.38,materials.skin,10);
-  const helmet=cylinder(group,0,1.99,0,.29,.3,.2,materials.helmet,10);
-  const brim=cylinder(group,0,1.91,0,.34,.34,.06,materials.helmet,12);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.22,12,10),materials.skin);
+  head.position.set(0,1.78,0);group.add(head);
+  const helmetDome=new THREE.Mesh(new THREE.SphereGeometry(.31,12,8,0,Math.PI*2,0,Math.PI*.56),materials.helmet);
+  helmetDome.position.set(0,1.99,0);helmetDome.scale.y=.72;helmetDome.castShadow=true;group.add(helmetDome);
+  const brim=cylinder(group,0,1.91,0,.34,.34,.055,materials.helmet,14);
   box(group,0,1.2,.27,.42,.55,.2,trim);
   box(group,0,1.3,-.213,.12,.7,.025,materials.sandDark);
+  // Cloth straps, belt and field pack break up the blocky uniform silhouette.
+  const strapMat=mat(friendly?0x252f30:0x382b28);
+  const strapA=box(group,-.16,1.39,.225,.075,.72,.035,strapMat);strapA.rotation.z=-.22;
+  const strapB=box(group,.16,1.39,.225,.075,.72,.035,strapMat);strapB.rotation.z=.22;
+  box(group,0,.91,.225,.78,.13,.08,strapMat);
+  box(group,0,1.28,-.31,.52,.62,.22,trim);
+  box(group,0,1.58,-.31,.46,.12,.24,strapMat);
+  for(const side of [-1,1]){
+    box(group,side*.39,1.02,.02,.16,.25,.2,materials.sandDark);
+    box(group,side*.39,1.02,.14,.12,.17,.035,strapMat);
+  }
   box(group,0,.91,-.01,.76,.1,.44,materials.sandDark);
   box(group,-.34,.91,-.02,.16,.2,.18,trim);
   box(group,.34,.91,-.02,.16,.2,.18,trim);
@@ -347,10 +396,11 @@ function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a){
   const distance=direction.length();
   if(distance<.05)return;
   direction.normalize();
-  const core=new THREE.Mesh(new THREE.SphereGeometry(.105,10,8),new THREE.MeshBasicMaterial({color:tint,depthWrite:false}));
-  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.025,.055,.72,7),new THREE.MeshBasicMaterial({color:tint,transparent:true,opacity:.78,depthWrite:false}));
-  tail.rotation.x=Math.PI/2;
-  group.add(core,tail);
+  const core=new THREE.Mesh(new THREE.SphereGeometry(.12,14,12),new THREE.MeshBasicMaterial({color:tint,depthWrite:false}));
+  const halo=new THREE.Mesh(new THREE.SphereGeometry(.23,12,10),new THREE.MeshBasicMaterial({color:tint,transparent:true,opacity:.2,depthWrite:false}));
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.018,.045,.95,8),new THREE.MeshBasicMaterial({color:tint,transparent:true,opacity:.42,depthWrite:false}));
+  tail.rotation.x=Math.PI/2;halo.scale.set(1,1,1.8);
+  group.add(core,halo,tail);
   group.position.copy(start);
   group.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),direction);
   scene.add(group);
@@ -381,6 +431,12 @@ function spawnDust(position,tint=0xaaa18e){
   dustBursts.push({group,bits,age:0});
 }
 function updateAtmosphere(delta){
+  for(const smoke of smokeColumns){
+    smoke.phase+=delta*.22;
+    smoke.plume.position.y=.12+Math.sin(smoke.phase)*.16;
+    smoke.plume.rotation.y=Math.sin(smoke.phase*.7)*.05;
+    smoke.plume.children.forEach((puff,i)=>{puff.position.x+=Math.sin(smoke.phase+i*.8)*delta*.045;puff.material.opacity=.12+Math.sin(smoke.phase+i)*.025;});
+  }
   for(let i=arcadeBolts.length-1;i>=0;i--){
     const bolt=arcadeBolts[i];
     bolt.travelled=Math.min(bolt.distance,bolt.travelled+bolt.speed*delta);
