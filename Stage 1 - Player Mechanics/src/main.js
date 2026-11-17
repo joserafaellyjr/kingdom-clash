@@ -11,9 +11,9 @@ let gameActive = false;
 let fallbackLook = false;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87918d);
-scene.fog = new THREE.FogExp2(0x87918d, 0.0068);
+scene.fog = new THREE.FogExp2(0x87918d, 0.0048);
 
-const camera = new THREE.PerspectiveCamera(74, innerWidth / innerHeight, 0.1, 260);
+const camera = new THREE.PerspectiveCamera(74, innerWidth / innerHeight, 0.1, 420);
 camera.position.set(0, 1.7, 7);
 scene.add(camera);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -65,7 +65,7 @@ function groundPatch(x,z,sx,sz,material) {
 }
 
 // Open muddy front line: a road between two opposing flag bases.
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(220,220),materials.grass);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(320,360),materials.grass);
 ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
 groundPatch(0,0,15,150,materials.mud);
 for(let i=0;i<65;i++){
@@ -233,15 +233,17 @@ function flagBase(x,z,color,label){
   marker.rotation.x=-Math.PI/2; marker.position.set(x,.035,z); scene.add(marker);
   return {pole,cloth,marker,label};
 }
-const friendlyBase=flagBase(0,61,0x426b91,"BLUE BASE");
-const enemyBase=flagBase(0,-69,0x9a4a40,"RED BASE");
+const friendlyBase=flagBase(0,88,0x426b91,"BLUE BASE");
+const enemyBase=flagBase(0,-112,0x9a4a40,"RED BASE");
 // Five linked sectors create a longer, steadily advancing frontline.
 const frontlineObjectives=[
   {name:"A",label:"FORWARD TRENCH",z:29,x:0,captured:false,progress:0},
   {name:"B",label:"COMMUNICATION LINE",z:9,x:0,captured:false,progress:0},
   {name:"C",label:"CROSSROADS",z:-13,x:0,captured:false,progress:0},
   {name:"D",label:"RUINED VILLAGE",z:-36,x:0,captured:false,progress:0},
-  {name:"E",label:"REAR COMMAND POST",z:-56,x:0,captured:false,progress:0}
+  {name:"E",label:"REAR COMMAND POST",z:-56,x:0,captured:false,progress:0},
+  {name:"F",label:"OUTER VILLAGE",z:-78,x:0,captured:false,progress:0},
+  {name:"G",label:"COMMAND RIDGE",z:-96,x:0,captured:false,progress:0}
 ];
 let activeObjective=0;
 for(const objective of frontlineObjectives){
@@ -344,7 +346,7 @@ function makeSoldier(team,x,z,index){
     box(group,-.37,1.37,.12,.12,.25,.045,mat(0xd9d3bd),false);
     box(group,-.37,1.37,.15,.045,.17,.025,mat(0x9a4a40),false);
   }
-  const soldier={team,group,hp:100,maxHp:100,alive:true,cooldown:1+Math.random()*1.4,
+  const soldier={team,group,hp:100,maxHp:100,alive:true,respawnAt:0,cooldown:1+Math.random()*1.4,
     hpFill,index,role,step:Math.random()*6,parts:{leftLeg,rightLeg,leftArm,rightArm,torso,head,helmetDome},target:null,lastDamageAt:performance.now(),moving:false};
   soldiers.push(soldier); return soldier;
 }
@@ -356,7 +358,7 @@ for(let i=0;i<10;i++){
   const x=((i%5)-2)*2.5, z=-39-Math.floor(i/5)*3.4;
   makeSoldier("red",x,z,i);
 }
-const playerState={health:100,maxHealth:100,lastDamageAt:performance.now(),ammo:8,maxAmmo:8,reloading:false,shield:false,shieldDurability:100,shieldMax:100,shieldBrokenUntil:0,aiming:false,sprinting:false,lastW:0,capture:0,won:false,classId:"rifleman",reloadMs:1500,speed:5.8};
+const playerState={health:100,maxHealth:100,lastDamageAt:performance.now(),ammo:8,maxAmmo:8,reloading:false,shield:false,shieldDurability:100,shieldMax:100,shieldBrokenUntil:0,aiming:false,sprinting:false,lastW:0,capture:0,won:false,classId:"rifleman",reloadMs:1500,speed:5.8,respawnAt:0,xp:0,level:1,coins:100,inventory:[],equipped:"Standard Kit"};
 const classDefinitions={
   rifleman:{name:"Rifleman",description:"Balanced frontline soldier. A reliable all-rounder.",health:100,ammo:8,speed:5.8,reloadMs:1500},
   medic:{name:"Medic",description:"Keeps nearby friendly soldiers in the fight with gradual squad healing.",health:105,ammo:7,speed:5.6,reloadMs:1600},
@@ -372,6 +374,10 @@ let medicTick=0;
 let aiMedicTick=0;
 let rallyMode=false;
 const keys=new Set();
+const shopItems=[{id:"scarf",name:"Veteran Scarf",price:75,description:"A cosmetic uniform accent."},{id:"banner",name:"Squad Banner",price:110,description:"A decorative squad banner."},{id:"badge",name:"Service Badge",price:160,description:"A cosmetic service badge."}];
+function xpToNextLevel(level){return 250*level;}
+function awardXP(amount,reason){playerState.xp+=amount;const coins=Math.floor(amount/10);playerState.coins+=coins;let ups=0;while(playerState.xp>=xpToNextLevel(playerState.level)){playerState.xp-=xpToNextLevel(playerState.level);playerState.level++;ups++;}statusText((reason?reason+" · ":"")+"+"+amount+" XP · +"+coins+" coins"+(ups?" · LEVEL "+playerState.level+"!":""));updateProgressionUI();}
+function updateProgressionUI(){const next=xpToNextLevel(playerState.level);const xp=document.querySelector("#kc-xp");if(xp)xp.textContent=playerState.xp+" / "+next;const level=document.querySelector("#kc-level");if(level)level.textContent=playerState.level;const coins=document.querySelector("#kc-coins");if(coins)coins.textContent=playerState.coins;const bar=document.querySelector("#kc-xp-fill");if(bar)bar.style.width=(playerState.xp/next*100)+"%";const inv=document.querySelector("#kc-inventory-list");if(inv){inv.innerHTML=playerState.inventory.length?playerState.inventory.map(id=>{const item=shopItems.find(x=>x.id===id);return `<div class=\"kc-item\"><b>${item?item.name:id}</b><small>${playerState.equipped===id?"EQUIPPED":"OWNED"}</small><button data-equip=\"${id}\" ${playerState.equipped===id?"disabled":""}>EQUIP</button></div>`;}).join(""):"<p class=\"kc-empty\">Your inventory is empty. Visit the shop to collect cosmetics.</p>";inv.querySelectorAll("[data-equip]").forEach(b=>b.addEventListener("click",()=>{playerState.equipped=b.dataset.equip;updateProgressionUI();statusText("Equipped "+shopItems.find(x=>x.id===playerState.equipped).name);}));}const shop=document.querySelector("#kc-shop-list");if(shop){shop.innerHTML=shopItems.map(item=>{const owned=playerState.inventory.includes(item.id);return `<div class=\"kc-item\"><b>${item.name}</b><small>${item.description}</small><button data-buy=\"${item.id}\" ${owned||playerState.coins<item.price?"disabled":""}>${owned?"OWNED":item.price+" COINS · BUY"}</button></div>`;}).join("");shop.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{const item=shopItems.find(x=>x.id===b.dataset.buy);if(!item||playerState.inventory.includes(item.id)||playerState.coins<item.price)return;playerState.coins-=item.price;playerState.inventory.push(item.id);statusText("Purchased "+item.name);updateProgressionUI();}));}}
 const raycaster=new THREE.Raycaster();
 const center=new THREE.Vector2(0,0);
 const statusText=t=>{status.textContent=t;};
@@ -385,12 +391,13 @@ function updateHud(){
   const shieldWait=Math.max(0,Math.ceil((playerState.shieldBrokenUntil-performance.now())/1000));
   shieldHud.textContent=shieldWait>0?"BROKEN "+shieldWait+"s":(playerState.shield?"ACTIVE ":"READY ")+Math.ceil(playerState.shieldDurability)+"%";
   document.querySelector("#kc-class").textContent=classDefinitions[playerState.classId].name.toUpperCase();
+  updateProgressionUI();
 }
 // Removed drifting haze/air specks; battle visuals now come from brief impact effects.
 const dustBursts=[];
 const arcadeSparks=[];
 const arcadeBolts=[];
-function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a,hitsPlayer=false){
+function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a,hitsPlayer=false,playerShot=false){
   const group=new THREE.Group();
   const direction=new THREE.Vector3().subVectors(end,start);
   const distance=direction.length();
@@ -404,7 +411,7 @@ function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a,hitsPlay
   group.position.copy(start);
   group.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),direction);
   scene.add(group);
-  arcadeBolts.push({group,start:start.clone(),end:end.clone(),target,damage,direction,distance,travelled:0,speed:22,hitsPlayer});
+  arcadeBolts.push({group,start:start.clone(),end:end.clone(),target,damage,direction,distance,travelled:0,speed:22,hitsPlayer,playerShot});
 }
 
 function spawnArcadeSparks(position,tint=0xffdf8a){
@@ -451,8 +458,10 @@ function updateAtmosphere(delta){
       }else if(bolt.target&&bolt.target.alive){
         spawnArcadeSparks(bolt.end,0xffdf8a);
         spawnDust(bolt.end,0xb9a98b);
+        const wasAlive=bolt.target.alive;
         damageSoldier(bolt.target,bolt.damage);
-        statusText("Arcade bolt impact");
+        if(wasAlive&&!bolt.target.alive&&bolt.playerShot)awardXP(25,"Opponent defeated");
+        else statusText("Arcade bolt impact");
       }else{
         spawnDust(bolt.end,0xa99f8b);
       }
@@ -499,10 +508,9 @@ function damagePlayer(amount){
   statusText("Direct hit · Health reduced");
   updateHud();
   if(playerState.health<=0){
-    playerState.health=playerState.maxHealth;
-    playerState.lastDamageAt=performance.now();
-    statusText("You regrouped at base");
-    camera.position.set(0,1.7,7);
+    playerState.respawnAt=performance.now()+3000;
+    playerState.shield=false;shield.visible=false;playerState.sprinting=false;keys.clear();
+    statusText("Defeated · Respawning at base in 3 seconds");
     updateHud();
   }
 }
@@ -512,7 +520,7 @@ function damageSoldier(s,amount){
   s.lastDamageAt=performance.now();
   const ratio=s.hp/s.maxHp;
   s.hpFill.scale.x=Math.max(.001,ratio); s.hpFill.position.x=-(1-ratio)*.43;
-  if(s.hp<=0){s.alive=false;s.group.visible=false;}
+  if(s.hp<=0){s.alive=false;s.group.visible=false;s.respawnAt=performance.now()+10000;}
 }
 function fire(){
   if(!gameActive||playerState.reloading||playerState.won)return;
@@ -535,7 +543,7 @@ function fire(){
   }
   const direction=new THREE.Vector3();camera.getWorldDirection(direction);
   const start=camera.position.clone().addScaledVector(direction,.9);
-  launchArcadeBolt(start,end,target);
+  launchArcadeBolt(start,end,target,50,0xffdf8a,false,true);
   statusText("Arcade bolt travelling...");
   updateHud();
 }
@@ -657,8 +665,8 @@ function soldierCombat(delta,now){
       s.parts.rightArm.rotation.x=-.85+Math.sin(s.step*1.8)*.08;
       s.parts.leftArm.rotation.x=-.12;
     }
-    s.group.position.x=THREE.MathUtils.clamp(s.group.position.x,-19,19);
-    s.group.position.z=THREE.MathUtils.clamp(s.group.position.z,-65,65);
+    s.group.position.x=THREE.MathUtils.clamp(s.group.position.x,-38,38);
+    s.group.position.z=THREE.MathUtils.clamp(s.group.position.z,-105,86);
   }
 }
 function playerIncomingDamage(delta){
@@ -694,6 +702,7 @@ function captureUpdate(delta){
     : "SECTOR "+objective.name+" · "+objective.label+" · "+percent+"%"+(squadInZone&&!inZone?" · SQUAD CAPTURING":"");
   if(objective.progress>=7){
     objective.captured=true;
+    awardXP(150,"Sector "+objective.name+" secured");
     // A small reserve squad arrives after each secured sector, keeping the push moving.
     if(activeObjective<frontlineObjectives.length-1){
       const reserveIndex=10+activeObjective*2;
@@ -709,7 +718,7 @@ function captureUpdate(delta){
     activeObjective++;
     playerState.capture=0;
     if(activeObjective>=frontlineObjectives.length){
-      playerState.won=true;statusText("Victory · All five frontline sectors secured");
+      playerState.won=true;statusText("Victory · All seven frontline sectors secured");
       document.querySelector("#kc-result").classList.remove("hidden");
       controls.unlock();
     }else{
@@ -718,12 +727,14 @@ function captureUpdate(delta){
   }
 }
 function updateRegeneration(delta,now){
+  if(playerState.health<=0&&playerState.respawnAt&&now>=playerState.respawnAt){playerState.health=playerState.maxHealth;playerState.lastDamageAt=now;playerState.respawnAt=0;playerState.ammo=playerState.maxAmmo;playerState.reloading=false;playerState.shieldDurability=playerState.shieldMax;camera.position.set(0,1.7,82);camera.rotation.set(0,0,0);statusText("Respawned at the blue base · Back to the frontline");updateHud();}
   // Game-only recovery begins after a short break from pressure.
   if(playerState.health<playerState.maxHealth&&now-playerState.lastDamageAt>3500){
     playerState.health=Math.min(playerState.maxHealth,playerState.health+5*delta);
   }
   for(const s of soldiers){
-    if(!s.alive||s.hp>=s.maxHp||now-s.lastDamageAt<4500)continue;
+    if(!s.alive){if(s.respawnAt&&now>=s.respawnAt){const spawnZ=s.team==="blue"?82:-105;s.group.position.set(((s.index%5)-2)*2.3,0,spawnZ+Math.floor(s.index/5)*2.4);s.hp=s.maxHp;s.alive=true;s.group.visible=true;s.cooldown=1+Math.random()*1.4;s.lastDamageAt=now;s.respawnAt=0;s.hpFill.scale.x=1;s.hpFill.position.x=0;}continue;}
+    if(s.hp>=s.maxHp||now-s.lastDamageAt<4500)continue;
     const recoveryRate=playerState.classId==="quartermaster"&&s.team==="blue"?4.5:3;
     s.hp=Math.min(s.maxHp,s.hp+recoveryRate*delta);
     const ratio=s.hp/s.maxHp;
@@ -732,7 +743,7 @@ function updateRegeneration(delta,now){
   }
 }
 function updateMovement(delta){
-  if(!gameActive)return;
+  if(!gameActive||playerState.health<=0)return;
   const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();
   const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();
   const direction=new THREE.Vector3();
@@ -744,11 +755,12 @@ function updateMovement(delta){
     direction.normalize();
     const speed=(playerState.sprinting?playerState.speed*1.65:playerState.speed)*(playerState.shield?.64:1);
     camera.position.addScaledVector(direction,speed*delta);
-    camera.position.x=THREE.MathUtils.clamp(camera.position.x,-22,22);
-    camera.position.z=THREE.MathUtils.clamp(camera.position.z,-72,72);
+    camera.position.x=THREE.MathUtils.clamp(camera.position.x,-42,42);
+    camera.position.z=THREE.MathUtils.clamp(camera.position.z,-118,96);
   }
 }
 window.addEventListener("keydown",e=>{
+  if((e.code==="KeyI"||e.code==="KeyB")&&gameActive&&!e.repeat){const inv=document.querySelector("#kc-inventory-panel"),shop=document.querySelector("#kc-shop-panel");if(e.code==="KeyI"){inv.classList.toggle("hidden");shop.classList.add("hidden");}else{shop.classList.toggle("hidden");inv.classList.add("hidden");}updateProgressionUI();return;}
   if(e.code==="KeyG"&&gameActive&&!e.repeat){
     rallyMode=!rallyMode;
     statusText(rallyMode?"Squad order: regroup on your position":"Squad order: advance to the active sector");
