@@ -314,7 +314,10 @@ const classDefinitions={
   engineer:{name:"Engineer",description:"Sturdier frontline defender with extra personal health.",health:125,ammo:7,speed:5.2,reloadMs:1700},
   support:{name:"Support",description:"Carries a larger game-ammo supply before reloading.",health:105,ammo:12,speed:5.1,reloadMs:1900},
   scout:{name:"Scout",description:"Fast-moving role with lighter protection.",health:85,ammo:6,speed:7.1,reloadMs:1400},
-  officer:{name:"Officer",description:"Helps nearby friendly troops stay coordinated and fight more effectively.",health:100,ammo:8,speed:5.8,reloadMs:1500}
+  officer:{name:"Officer",description:"Helps nearby friendly troops stay coordinated and fight more effectively.",health:100,ammo:8,speed:5.8,reloadMs:1500},
+  quartermaster:{name:"Quartermaster",description:"Improves friendly squad recovery during long pushes.",health:110,ammo:8,speed:5.4,reloadMs:1550},
+  signalman:{name:"Signalman",description:"Coordinates the advance and speeds up uncontested sector captures.",health:95,ammo:7,speed:6.1,reloadMs:1500},
+  builder:{name:"Builder",description:"A sturdy objective specialist who helps secure contested ground.",health:120,ammo:7,speed:5.0,reloadMs:1750}
 };
 let medicTick=0;
 let aiMedicTick=0;
@@ -528,7 +531,9 @@ function captureUpdate(delta){
   if((inZone||squadInZone)&&!contested){
     const supportBonus=Math.min(allies.length,5)*.16;
     const commanderBonus=inZone ? .35 : 0;
-    objective.progress=Math.min(7,objective.progress+delta*(1+supportBonus+commanderBonus));
+    const signalBonus=playerState.classId==="signalman"&&inZone?.4:0;
+    const builderBonus=playerState.classId==="builder"&&inZone?.22:0;
+    objective.progress=Math.min(7,objective.progress+delta*(1+supportBonus+commanderBonus+signalBonus+builderBonus));
   }else if(contested){
     objective.progress=Math.max(0,objective.progress-delta*.3);
   }else{
@@ -564,7 +569,8 @@ function updateRegeneration(delta,now){
   }
   for(const s of soldiers){
     if(!s.alive||s.hp>=s.maxHp||now-s.lastDamageAt<4500)continue;
-    s.hp=Math.min(s.maxHp,s.hp+3*delta);
+    const recoveryRate=playerState.classId==="quartermaster"&&s.team==="blue"?4.5:3;
+    s.hp=Math.min(s.maxHp,s.hp+recoveryRate*delta);
     const ratio=s.hp/s.maxHp;
     s.hpFill.scale.x=Math.max(.001,ratio);
     s.hpFill.position.x=-(1-ratio)*.43;
