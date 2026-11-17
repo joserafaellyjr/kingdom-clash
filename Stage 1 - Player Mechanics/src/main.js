@@ -491,7 +491,7 @@ function updateAtmosphere(delta){
   }
 }
 function damagePlayer(amount){
-  if(!gameActive||playerState.won)return;
+  if(!gameActive||playerState.won||playerState.health<=0)return;
   if(playerState.shield){
     playerState.shieldDurability=Math.max(0,playerState.shieldDurability-amount*2);
     statusText("Incoming bolt blocked by shield");
