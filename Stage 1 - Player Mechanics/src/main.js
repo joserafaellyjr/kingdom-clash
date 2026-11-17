@@ -531,8 +531,8 @@ function captureUpdate(delta){
   if((inZone||squadInZone)&&!contested){
     const supportBonus=Math.min(allies.length,5)*.16;
     const commanderBonus=inZone ? .35 : 0;
-    const signalBonus=playerState.classId==="signalman"&&inZone?.4:0;
-    const builderBonus=playerState.classId==="builder"&&inZone?.22:0;
+    const signalBonus=playerState.classId==="signalman"&&inZone ? 0.4 : 0;
+    const builderBonus=playerState.classId==="builder"&&inZone ? 0.22 : 0;
     objective.progress=Math.min(7,objective.progress+delta*(1+supportBonus+commanderBonus+signalBonus+builderBonus));
   }else if(contested){
     objective.progress=Math.max(0,objective.progress-delta*.3);
