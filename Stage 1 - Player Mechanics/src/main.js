@@ -469,7 +469,7 @@ function updateAtmosphere(delta){
     let hitPoint=next.clone();
     if(stepLength>.001&&bolt.sourceTeam){
       const stepRay=new THREE.Raycaster(previous,stepVector.clone().normalize(),0,stepLength+.22);
-      const candidates=alive("blue").concat(alive("red"));
+      const candidates=alive("blue").concat(alive("red")).filter(s=>s.group.position.distanceTo(previous)>1.4);
       const intersections=stepRay.intersectObjects(candidates.map(s=>s.group),true);
       if(intersections.length){
         let hitObject=intersections[0].object;
