@@ -410,7 +410,7 @@ function updateHud(){
 const dustBursts=[];
 const arcadeSparks=[];
 const arcadeBolts=[];
-function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a,hitsPlayer=false,playerShot=false){
+function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a,hitsPlayer=false,playerShot=false,sourceTeam=null){
   const group=new THREE.Group();
   const direction=new THREE.Vector3().subVectors(end,start);
   const distance=direction.length();
@@ -424,7 +424,7 @@ function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a,hitsPlay
   group.position.copy(start);
   group.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),direction);
   scene.add(group);
-  arcadeBolts.push({group,start:start.clone(),end:end.clone(),target,damage,direction,distance,travelled:0,speed:22,hitsPlayer,playerShot});
+  arcadeBolts.push({group,start:start.clone(),end:end.clone(),target,damage,direction,distance,travelled:0,speed:22,hitsPlayer,playerShot,sourceTeam});
 }
 
 function spawnArcadeSparks(position,tint=0xffdf8a){
@@ -459,9 +459,38 @@ function updateAtmosphere(delta){
   }
   for(let i=arcadeBolts.length-1;i>=0;i--){
     const bolt=arcadeBolts[i];
+    const previous=bolt.group.position.clone();
     bolt.travelled=Math.min(bolt.distance,bolt.travelled+bolt.speed*delta);
     const t=bolt.travelled/bolt.distance;
-    bolt.group.position.copy(bolt.start).lerp(bolt.end,t);
+    const next=bolt.start.clone().lerp(bolt.end,t);
+    const stepVector=next.clone().sub(previous);
+    const stepLength=stepVector.length();
+    let hitSoldier=null;
+    let hitPoint=next.clone();
+    if(stepLength>.001&&bolt.sourceTeam){
+      const stepRay=new THREE.Raycaster(previous,stepVector.clone().normalize(),0,stepLength+.22);
+      const candidates=alive("blue").concat(alive("red"));
+      const intersections=stepRay.intersectObjects(candidates.map(s=>s.group),true);
+      if(intersections.length){
+        let hitObject=intersections[0].object;
+        while(hitObject.parent&&!soldiers.some(s=>s.group===hitObject))hitObject=hitObject.parent;
+        hitSoldier=candidates.find(s=>s.group===hitObject)||null;
+        hitPoint=intersections[0].point.clone();
+      }
+    }
+    if(hitSoldier){
+      bolt.group.position.copy(hitPoint);
+      scene.remove(bolt.group);
+      bolt.group.children.forEach(child=>{child.geometry.dispose();child.material.dispose();});
+      const sameTeam=hitSoldier.team===bolt.sourceTeam;
+      spawnArcadeSparks(hitPoint,sameTeam?0x9edcff:0xffdf8a);
+      const wasAlive=hitSoldier.alive;
+      damageSoldier(hitSoldier,bolt.damage*(sameTeam?0.25:1));
+      if(wasAlive&&!hitSoldier.alive&&bolt.playerShot&&!sameTeam)awardXP(25,"Opponent defeated");
+      else statusText(sameTeam?"Friendly fire · Reduced team damage":"Arcade bolt impact");
+      arcadeBolts.splice(i,1);updateHud();continue;
+    }
+    bolt.group.position.copy(next);
     if(t>=1){
       scene.remove(bolt.group);
       bolt.group.children.forEach(child=>{child.geometry.dispose();child.material.dispose();});
@@ -472,8 +501,9 @@ function updateAtmosphere(delta){
         spawnArcadeSparks(bolt.end,0xffdf8a);
         spawnDust(bolt.end,0xb9a98b);
         const wasAlive=bolt.target.alive;
-        damageSoldier(bolt.target,bolt.damage);
-        if(wasAlive&&!bolt.target.alive&&bolt.playerShot)awardXP(25,"Opponent defeated");
+        const sameTeam=bolt.sourceTeam&&bolt.target.team===bolt.sourceTeam;
+        damageSoldier(bolt.target,bolt.damage*(sameTeam?0.25:1));
+        if(wasAlive&&!bolt.target.alive&&bolt.playerShot&&!sameTeam)awardXP(25,"Opponent defeated");
         else statusText("Arcade bolt impact");
       }else{
         spawnDust(bolt.end,0xa99f8b);
@@ -542,7 +572,7 @@ function fire(){
   showMuzzleFlash();
   raycaster.setFromCamera(center,camera);
   raycaster.far=45;
-  const targets=alive("red").map(s=>s.group);
+  const targets=alive("blue").concat(alive("red")).map(s=>s.group);
   const hits=raycaster.intersectObjects(targets,true);
   let target=null,end;
   if(hits.length){
@@ -556,7 +586,7 @@ function fire(){
   }
   const direction=new THREE.Vector3();camera.getWorldDirection(direction);
   const start=camera.position.clone().addScaledVector(direction,.9);
-  launchArcadeBolt(start,end,target,50,0xffdf8a,false,true);
+  launchArcadeBolt(start,end,target,50,0xffdf8a,false,true,"blue");
   statusText("Arcade bolt travelling...");
   updateHud();
 }
@@ -637,7 +667,7 @@ function soldierCombat(delta,now){
         s.cooldown=2.2+Math.random()*1.1;
         const startPoint=s.group.position.clone().add(new THREE.Vector3(0,1.2,0));
         const impactPoint=camera.position.clone().add(new THREE.Vector3(0,.15,0));
-        launchArcadeBolt(startPoint,impactPoint,null,8,0xffb58c,true);
+        launchArcadeBolt(startPoint,impactPoint,null,8,0xffb58c,true,false,"red");
       }
     }else if(target&&distance<=12){
       s.group.rotation.y=Math.atan2(targetVector.x,targetVector.z);
@@ -647,7 +677,7 @@ function soldierCombat(delta,now){
         s.cooldown=(officerBoost?1.25:1.6)+Math.random()*.9;
         const startPoint=s.group.position.clone().add(new THREE.Vector3(0,1.2,0));
         const impactPoint=target.group.position.clone().add(new THREE.Vector3(0,1.1,0));
-        launchArcadeBolt(startPoint,impactPoint,target,8,s.team==="blue"?0x9edcff:0xffb58c);
+        launchArcadeBolt(startPoint,impactPoint,target,8,s.team==="blue"?0x9edcff:0xffb58c,false,false,s.team);
       }
     }else{
       const move=new THREE.Vector3();
