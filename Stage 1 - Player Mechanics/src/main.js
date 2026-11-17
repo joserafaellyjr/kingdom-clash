@@ -410,7 +410,7 @@ function updateHud(){
 const dustBursts=[];
 const arcadeSparks=[];
 const arcadeBolts=[];
-function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a,hitsPlayer=false,playerShot=false,sourceTeam=null){
+function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a,hitsPlayer=false,playerShot=false,sourceTeam=null,sourceSoldier=null){
   const group=new THREE.Group();
   const direction=new THREE.Vector3().subVectors(end,start);
   const distance=direction.length();
@@ -424,7 +424,7 @@ function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a,hitsPlay
   group.position.copy(start);
   group.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),direction);
   scene.add(group);
-  arcadeBolts.push({group,start:start.clone(),end:end.clone(),target,damage,direction,distance,travelled:0,speed:22,hitsPlayer,playerShot,sourceTeam});
+  arcadeBolts.push({group,start:start.clone(),end:end.clone(),target,damage,direction,distance,travelled:0,speed:22,hitsPlayer,playerShot,sourceTeam,sourceSoldier});
 }
 
 function spawnArcadeSparks(position,tint=0xffdf8a){
@@ -469,7 +469,7 @@ function updateAtmosphere(delta){
     let hitPoint=next.clone();
     if(stepLength>.001&&bolt.sourceTeam){
       const stepRay=new THREE.Raycaster(previous,stepVector.clone().normalize(),0,stepLength+.22);
-      const candidates=alive("blue").concat(alive("red")).filter(s=>s.group.position.distanceTo(previous)>1.4);
+      const candidates=alive("blue").concat(alive("red")).filter(s=>s!==bolt.sourceSoldier);
       const intersections=stepRay.intersectObjects(candidates.map(s=>s.group),true);
       if(intersections.length){
         let hitObject=intersections[0].object;
@@ -677,7 +677,7 @@ function soldierCombat(delta,now){
         s.cooldown=(officerBoost?1.25:1.6)+Math.random()*.9;
         const startPoint=s.group.position.clone().add(new THREE.Vector3(0,1.2,0));
         const impactPoint=target.group.position.clone().add(new THREE.Vector3(0,1.1,0));
-        launchArcadeBolt(startPoint,impactPoint,target,8,s.team==="blue"?0x9edcff:0xffb58c,false,false,s.team);
+        launchArcadeBolt(startPoint,impactPoint,target,8,s.team==="blue"?0x9edcff:0xffb58c,false,false,s.team,s);
       }
     }else{
       const move=new THREE.Vector3();
