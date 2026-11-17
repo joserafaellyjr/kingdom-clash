@@ -28,7 +28,7 @@
         <span><kbd>W A S D</kbd> Move</span><span><kbd>W W</kbd> Sprint</span>
         <span><kbd>LEFT</kbd> Fire</span><span><kbd>RIGHT</kbd> Aim</span>
         <span><kbd>R</kbd> Reload</span><span><kbd>SHIFT</kbd> Shield</span>
-        <span><kbd>ESC</kbd> Pause</span><span><kbd>G</kbd> Squad rally</span><span><kbd>I</kbd> Inventory</span><span><kbd>B</kbd> Shop</span><span><kbd>1–4</kbd> Use supplies</span>
+        <span><kbd>ESC</kbd> Pause</span><span><kbd>G</kbd> Squad rally</span><span><kbd>I</kbd> Inventory</span><span><kbd>B</kbd> Shop</span><span><kbd>1–4</kbd> Use supplies</span><span><kbd>SCROLL</kbd> Select tool</span><span><kbd>MIDDLE CLICK</kbd> Deploy cover</span>
       </div>
     </div>
     <div id="battle-hud">
@@ -37,7 +37,7 @@
       <span>ALLIES <b id="kc-allies">10</b></span>
       <span>ENEMIES <b id="kc-enemies">10</b></span>
       <span>CLASS <b id="kc-class">RIFLEMAN</b></span>
-      <span>SHIELD <b id="kc-shield">STOWED</b></span>
+      <span>SHIELD <b id="kc-shield">STOWED</b></span><span>TOOL <b id="kc-tool">STANDARD</b></span>
     </div>
     <div id="kc-progression"><span>LEVEL <b id="kc-level">1</b></span><span>XP <b id="kc-xp">0 / 250</b></span><span>COINS <b id="kc-coins">100</b></span><div class="kc-xp-track"><i id="kc-xp-fill"></i></div><span class="kc-shortcuts"><kbd>I</kbd> INVENTORY <kbd>B</kbd> SHOP</span></div>
     <section id="kc-inventory-panel" class="kc-side-panel hidden"><h3>INVENTORY</h3><p>Use supplies here or press 1 Rations · 2 Medical Kit · 3 Signal Flare · 4 Squad Rally.</p><div id="kc-inventory-list"></div></section>
@@ -60,15 +60,15 @@
         <h2>SELECT A CLASS</h2>
         <p class="description">Every role has a different strength. Your choice applies for this match.</p>
         <div class="class-grid">
-          <button class="class-card" data-class="rifleman"><strong>RIFLEMAN</strong><small>Balanced frontline role</small><span>100 HP · 8 rounds</span></button>
-          <button class="class-card" data-class="medic"><strong>MEDIC</strong><small>Gradually heals nearby allies</small><span>105 HP · 7 rounds</span></button>
-          <button class="class-card" data-class="engineer"><strong>ENGINEER</strong><small>Extra personal health</small><span>125 HP · 7 rounds</span></button>
-          <button class="class-card" data-class="support"><strong>SUPPORT</strong><small>Larger ammo supply</small><span>105 HP · 12 rounds</span></button>
-          <button class="class-card" data-class="scout"><strong>SCOUT</strong><small>Faster movement</small><span>85 HP · 6 rounds</span></button>
-          <button class="class-card" data-class="officer"><strong>OFFICER</strong><small>Nearby allies stay coordinated</small><span>100 HP · 8 rounds</span></button>
-          <button class="class-card" data-class="quartermaster"><strong>QUARTERMASTER</strong><small>Improves friendly squad recovery</small><span>110 HP · 8 rounds</span></button>
-          <button class="class-card" data-class="signalman"><strong>SIGNALMAN</strong><small>Speeds up uncontested captures</small><span>95 HP · 7 rounds</span></button>
-          <button class="class-card" data-class="builder"><strong>BUILDER</strong><small>Sturdy objective specialist</small><span>120 HP · 7 rounds</span></button>
+          <button class="class-card" data-class="rifleman"><strong>RIFLEMAN</strong><small>Reliable all-rounder. No special ability.</small><span>100 HP · 8 rounds · 5.8 speed</span></button>
+          <button class="class-card" data-class="medic"><strong>MEDIC</strong><small>Heals nearby allies +5 every 2 sec. Lower personal health and smaller supply.</small><span>90 HP · 6 rounds · 5.4 speed</span></button>
+          <button class="class-card" data-class="engineer"><strong>ENGINEER</strong><small>Deploys 3 field-cover sections. Slower with fewer supplies.</small><span>110 HP · 6 rounds · 4.8 speed</span></button>
+          <button class="class-card" data-class="support"><strong>SUPPORT</strong><small>Largest ammo supply. Slow movement and longer reload.</small><span>100 HP · 10 rounds · 4.8 speed</span></button>
+          <button class="class-card" data-class="scout"><strong>SCOUT</strong><small>Fastest movement. Lowest health and limited supply.</small><span>75 HP · 6 rounds · 7.0 speed</span></button>
+          <button class="class-card" data-class="officer"><strong>OFFICER</strong><small>Nearby allies coordinate faster. Lower health and smaller supply.</small><span>90 HP · 7 rounds · 5.4 speed</span></button>
+          <button class="class-card" data-class="quartermaster"><strong>QUARTERMASTER</strong><small>Friendly troops recover faster. Slower movement and reload.</small><span>100 HP · 8 rounds · 5.2 speed</span></button>
+          <button class="class-card" data-class="signalman"><strong>SIGNALMAN</strong><small>Speeds up captures while present. Low health and limited supply.</small><span>85 HP · 6 rounds · 5.9 speed</span></button>
+          <button class="class-card" data-class="builder"><strong>BUILDER</strong><small>Deploys 4 field-cover sections. Slowest movement and reload.</small><span>115 HP · 6 rounds · 4.6 speed</span></button>
         </div>
       </div>
     </section>
