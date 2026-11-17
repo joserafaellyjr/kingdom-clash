@@ -417,7 +417,8 @@ function awardXP(amount,reason){
 }
 function useShopItem(id){
   const item=shopItems.find(x=>x.id===id&&x.type==="supply");
-  if(!item||!playerState.supplies[id])return;
+  if(!item)return;
+  if(!playerState.supplies[id]){statusText(item.name+" not in inventory · Buy it in the shop");return;}
   if(id==="rations"||id==="medkit"){
     if(playerState.health<=0||playerState.health>=playerState.maxHealth){statusText("Health is already full · Save this supply");return;}
     const restored=Math.min(id==="rations"?30:60,playerState.maxHealth-playerState.health);
@@ -874,6 +875,8 @@ function updateMovement(delta){
 }
 window.addEventListener("keydown",e=>{
   if((e.code==="KeyI"||e.code==="KeyB")&&gameActive&&!e.repeat){const inv=document.querySelector("#kc-inventory-panel"),shop=document.querySelector("#kc-shop-panel");if(e.code==="KeyI"){inv.classList.toggle("hidden");shop.classList.add("hidden");}else{shop.classList.toggle("hidden");inv.classList.add("hidden");}updateProgressionUI();return;}
+  const supplyHotkeys={Digit1:"rations",Digit2:"medkit",Digit3:"flare",Digit4:"rally"};
+  if(gameActive&&!e.repeat&&supplyHotkeys[e.code]){useShopItem(supplyHotkeys[e.code]);return;}
   if(e.code==="KeyG"&&gameActive&&!e.repeat){
     rallyMode=!rallyMode;
     statusText(rallyMode?"Squad order: regroup on your position":"Squad order: advance to the active sector");
