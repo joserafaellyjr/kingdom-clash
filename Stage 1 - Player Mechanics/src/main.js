@@ -337,6 +337,20 @@ function updateHud(){
 }
 // Removed drifting haze/air specks; battle visuals now come from brief impact effects.
 const dustBursts=[];
+const arcadeSparks=[];
+function spawnArcadeSparks(position,tint=0xffdf8a){
+  const group=new THREE.Group();group.position.copy(position);scene.add(group);
+  const bits=[];
+  for(let i=0;i<7;i++){
+    const geometry=new THREE.OctahedronGeometry(.075+Math.random()*.045,0);
+    const material=new THREE.MeshBasicMaterial({color:tint,transparent:true,opacity:.95,depthWrite:false});
+    const mesh=new THREE.Mesh(geometry,material);
+    mesh.position.set((Math.random()-.5)*.18,(Math.random()-.5)*.18,(Math.random()-.5)*.18);
+    group.add(mesh);
+    bits.push({mesh,velocity:new THREE.Vector3((Math.random()-.5)*3,(Math.random()-.5)*3,(Math.random()-.5)*3)});
+  }
+  arcadeSparks.push({group,bits,age:0});
+}
 function spawnDust(position,tint=0xaaa18e){
   const group=new THREE.Group();group.position.copy(position);scene.add(group);
   const bits=[];
@@ -348,6 +362,19 @@ function spawnDust(position,tint=0xaaa18e){
   dustBursts.push({group,bits,age:0});
 }
 function updateAtmosphere(delta){
+  for(let i=arcadeSparks.length-1;i>=0;i--){
+    const burst=arcadeSparks[i];burst.age+=delta;
+    for(const bit of burst.bits){
+      bit.mesh.position.addScaledVector(bit.velocity,delta);
+      bit.mesh.material.opacity=Math.max(0,.95-burst.age*3.2);
+      bit.mesh.rotation.x+=delta*8;bit.mesh.rotation.y+=delta*10;
+    }
+    if(burst.age>.3){
+      scene.remove(burst.group);
+      burst.bits.forEach(b=>{b.mesh.geometry.dispose();b.mesh.material.dispose();});
+      arcadeSparks.splice(i,1);
+    }
+  }
   for(let i=dustBursts.length-1;i>=0;i--){
     const burst=dustBursts[i];burst.age+=delta;
     for(const bit of burst.bits){
@@ -377,7 +404,7 @@ function fire(){
     let obj=hits[0].object;
     while(obj.parent&&!soldiers.some(s=>s.group===obj))obj=obj.parent;
     const target=soldiers.find(s=>s.group===obj);
-    if(target){damageSoldier(target,50);spawnDust(hits[0].point,0xb9a98b);statusText("Hit confirmed");}
+    if(target){damageSoldier(target,50);spawnArcadeSparks(hits[0].point,0xffdf8a);spawnDust(hits[0].point,0xb9a98b);statusText("Hit confirmed");}
   }else {spawnDust(camera.position.clone().add(new THREE.Vector3(0,-.4,-5).applyQuaternion(camera.quaternion)),0xa99f8b);statusText("Shot fired");}
   updateHud();
 }
@@ -444,7 +471,9 @@ function soldierCombat(delta,now){
       if(s.cooldown<=0){
         const officerBoost=playerState.classId==="officer"&&s.team==="blue"&&s.group.position.distanceTo(camera.position)<18;
         s.cooldown=(officerBoost?1.25:1.6)+Math.random()*.9;
-        spawnDust(target.group.position.clone().add(new THREE.Vector3(0,1.1,0)),s.team==="blue"?0xaab9bf:0xbda69a);
+        const impactPoint=target.group.position.clone().add(new THREE.Vector3(0,1.1,0));
+        spawnArcadeSparks(impactPoint,s.team==="blue"?0x9edcff:0xffb58c);
+        spawnDust(impactPoint,s.team==="blue"?0xaab9bf:0xbda69a);
         damageSoldier(target,8);if(target.team==="blue"&&target.hp<=0)updateHud();
       }
     }else{
@@ -504,6 +533,15 @@ function captureUpdate(delta){
     : "SECTOR "+objective.name+" · "+objective.label+" · "+percent+"%"+(squadInZone&&!inZone?" · SQUAD CAPTURING":"");
   if(objective.progress>=7){
     objective.captured=true;
+    // A small reserve squad arrives after each secured sector, keeping the push moving.
+    if(activeObjective<frontlineObjectives.length-1){
+      const reserveIndex=10+activeObjective*2;
+      for(let n=0;n<2;n++){
+        const reserve=makeSoldier("blue",((n===0)?-1:1)*2.1,objective.z+7+n*1.8,reserveIndex+n);
+        reserve.role="rifle";
+      }
+      statusText("Sector secured · Two reserves have joined your squad");
+    }
     objective.banner.material.color.set(0x557c9b);
     objective.ring.material.color.set(0x6e9db7);
     objective.ring.material.opacity=.9;
