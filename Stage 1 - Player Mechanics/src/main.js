@@ -861,6 +861,7 @@ function updateRegeneration(delta,now){
 function placeFieldCover(){
   if(!gameActive||playerState.health<=0||playerState.won)return;
   if(!["engineer","builder"].includes(playerState.classId)){statusText("Fieldworks are available to Engineer and Builder classes");return;}
+  if(playerState.toolMode!=="fieldworks"){statusText("Scroll to select fieldworks before deploying");return;}
   if(playerState.fieldworkCharges<=0){statusText("No field-cover sections remaining");return;}
   const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();
   const position=camera.position.clone().addScaledVector(forward,4.2);
@@ -894,7 +895,7 @@ function updateMovement(delta){
   if(keys.has("KeyA"))direction.sub(right);
   if(direction.lengthSq()>0){
     direction.normalize();
-    const sprintFactor=playerState.classId==="support"||playerState.classId==="builder"?.1:1.65;
+    const sprintFactor=playerState.classId==="support"||playerState.classId==="builder"?1.3:1.65;
     const speed=(playerState.sprinting?playerState.speed*sprintFactor:playerState.speed)*(playerState.shield?.64:1);
     camera.position.addScaledVector(direction,speed*delta);
     camera.position.x=THREE.MathUtils.clamp(camera.position.x,-42,42);
