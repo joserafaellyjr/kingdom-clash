@@ -67,7 +67,7 @@ function groundPatch(x,z,sx,sz,material) {
 // Open muddy front line: a road between two opposing flag bases.
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(320,360),materials.grass);
 ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
-groundPatch(0,0,15,150,materials.mud);
+groundPatch(0,0,20,220,materials.mud);
 for(let i=0;i<65;i++){
   const x=(Math.random()-.5)*13, z=65-Math.random()*130;
   const patch=new THREE.Mesh(new THREE.CircleGeometry(.25+Math.random()*.8,9),materials.mud2);
@@ -209,6 +209,11 @@ function ruinedBuilding(x,z,rotation=0){
 ruinedBuilding(-18,-18,.18);
 ruinedBuilding(18,9,-.22);
 ruinedBuilding(-17,48,-.12);
+ruinedBuilding(-18,-75,.1);
+ruinedBuilding(18,-84,-.3);
+dugout(-15,-91,.1);
+communicationTrench(-19,-54,-11,-68);
+communicationTrench(19,-54,11,-68);
 
 function dugout(x,z,rotation=0){
   const shelter=new THREE.Group();shelter.position.set(x,0,z);shelter.rotation.y=rotation;scene.add(shelter);
