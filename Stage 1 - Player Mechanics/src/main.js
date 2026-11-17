@@ -390,7 +390,7 @@ function updateHud(){
 const dustBursts=[];
 const arcadeSparks=[];
 const arcadeBolts=[];
-function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a){
+function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a,hitsPlayer=false){
   const group=new THREE.Group();
   const direction=new THREE.Vector3().subVectors(end,start);
   const distance=direction.length();
@@ -404,7 +404,7 @@ function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a){
   group.position.copy(start);
   group.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),direction);
   scene.add(group);
-  arcadeBolts.push({group,start:start.clone(),end:end.clone(),target,damage,direction,distance,travelled:0,speed:22});
+  arcadeBolts.push({group,start:start.clone(),end:end.clone(),target,damage,direction,distance,travelled:0,speed:22,hitsPlayer});
 }
 
 function spawnArcadeSparks(position,tint=0xffdf8a){
@@ -445,7 +445,10 @@ function updateAtmosphere(delta){
     if(t>=1){
       scene.remove(bolt.group);
       bolt.group.children.forEach(child=>{child.geometry.dispose();child.material.dispose();});
-      if(bolt.target&&bolt.target.alive){
+      if(bolt.hitsPlayer){
+        spawnArcadeSparks(bolt.end,0xffb58c);
+        damagePlayer(bolt.damage);
+      }else if(bolt.target&&bolt.target.alive){
         spawnArcadeSparks(bolt.end,0xffdf8a);
         spawnDust(bolt.end,0xb9a98b);
         damageSoldier(bolt.target,bolt.damage);
@@ -476,6 +479,20 @@ function updateAtmosphere(delta){
       bit.mesh.material.opacity=Math.max(0,.52-burst.age*.48);bit.mesh.scale.multiplyScalar(1+delta*.45);
     }
     if(burst.age>1.1){scene.remove(burst.group);burst.bits.forEach(b=>{b.mesh.geometry.dispose();b.mesh.material.dispose();});dustBursts.splice(i,1);}
+  }
+}
+function damagePlayer(amount){
+  if(!gameActive||playerState.won)return;
+  playerState.health=Math.max(0,playerState.health-amount);
+  playerState.lastDamageAt=performance.now();
+  statusText("Direct hit · Health reduced");
+  updateHud();
+  if(playerState.health<=0){
+    playerState.health=playerState.maxHealth;
+    playerState.lastDamageAt=performance.now();
+    statusText("You regrouped at base");
+    camera.position.set(0,1.7,7);
+    updateHud();
   }
 }
 function damageSoldier(s,amount){
@@ -577,7 +594,20 @@ function soldierCombat(delta,now){
     if(target){targetVector.subVectors(target.group.position,s.group.position);distance=targetVector.length();if(distance>.01)targetVector.normalize();}
     const movingToObjective = !(target&&distance<=12) && toObjective.lengthSq()>.05;
     s.moving=movingToObjective;
-    if(target&&distance<=12){
+    const playerDistance=s.team==="red"?s.group.position.distanceTo(camera.position):Infinity;
+    const targetingPlayer=s.team==="red"&&playerDistance<18&&(!target||playerDistance<distance);
+    if(targetingPlayer){
+      const toPlayer=new THREE.Vector3().subVectors(camera.position,s.group.position);
+      toPlayer.y=0;
+      if(toPlayer.lengthSq()>.01)s.group.rotation.y=Math.atan2(toPlayer.x,toPlayer.z);
+      s.cooldown-=delta;
+      if(s.cooldown<=0){
+        s.cooldown=2.2+Math.random()*1.1;
+        const startPoint=s.group.position.clone().add(new THREE.Vector3(0,1.2,0));
+        const impactPoint=camera.position.clone().add(new THREE.Vector3(0,.15,0));
+        launchArcadeBolt(startPoint,impactPoint,null,8,0xffb58c,true);
+      }
+    }else if(target&&distance<=12){
       s.group.rotation.y=Math.atan2(targetVector.x,targetVector.z);
       s.cooldown-=delta;
       if(s.cooldown<=0){
@@ -621,25 +651,8 @@ function soldierCombat(delta,now){
   }
 }
 function playerIncomingDamage(delta){
-  // Enemy pressure is represented as a simple game-only health drain at close range.
-  const threats=alive("red").filter(s=>s.group.position.distanceTo(camera.position)<18);
-  if(!threats.length)return;
-  const attacker=threats[0];
-  const toward=new THREE.Vector3().subVectors(attacker.group.position,camera.position).normalize();
-  const facing=new THREE.Vector3();camera.getWorldDirection(facing);
-  const shieldBlocks=playerState.shield&&facing.dot(toward)>.12;
-  if(shieldBlocks){
-    playerState.shieldDurability=Math.max(0,playerState.shieldDurability-18*delta*threats.length);
-    if(playerState.shieldDurability<=0){
-      playerState.shield=false;shield.visible=false;playerState.shieldBrokenUntil=performance.now()+8000;
-      statusText("Shield broken · Recovery takes 8 seconds");
-    }
-  }else{
-    playerState.health=Math.max(0,playerState.health-2.2*delta*threats.length);
-    playerState.lastDamageAt=performance.now();
-  }
-  updateHud();
-  if(playerState.health<=0){playerState.health=playerState.maxHealth;playerState.lastDamageAt=performance.now();statusText("You regrouped at base");camera.position.set(0,1.7,7);updateHud();}
+  // No proximity damage: only a confirmed arcade-bolt collision can reduce player health.
+  // Shield durability is checked when an incoming bolt actually reaches the player.
 }
 function captureUpdate(delta){
   if(activeObjective>=frontlineObjectives.length)return;
