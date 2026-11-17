@@ -371,17 +371,17 @@ for(let i=0;i<10;i++){
   const x=((i%5)-2)*2.5, z=-39-Math.floor(i/5)*3.4;
   makeSoldier("red",x,z,i);
 }
-const playerState={health:100,maxHealth:100,lastDamageAt:performance.now(),ammo:8,maxAmmo:8,reloading:false,shield:false,shieldDurability:100,shieldMax:100,shieldBrokenUntil:0,aiming:false,sprinting:false,lastW:0,capture:0,won:false,classId:"rifleman",reloadMs:1500,speed:5.8,respawnAt:0,xp:0,level:1,coins:100,inventory:[],supplies:{},equipped:"Standard Kit"};
+const playerState={health:100,maxHealth:100,lastDamageAt:performance.now(),ammo:8,maxAmmo:8,reloading:false,shield:false,shieldDurability:100,shieldMax:100,shieldBrokenUntil:0,aiming:false,sprinting:false,lastW:0,capture:0,won:false,classId:"rifleman",reloadMs:1500,speed:5.8,respawnAt:0,xp:0,level:1,coins:100,inventory:[],supplies:{},equipped:"Standard Kit",fieldworkCharges:0,toolMode:"standard"};
 const classDefinitions={
-  rifleman:{name:"Rifleman",description:"Balanced frontline soldier. A reliable all-rounder.",health:100,ammo:8,speed:5.8,reloadMs:1500},
-  medic:{name:"Medic",description:"Keeps nearby friendly soldiers in the fight with gradual squad healing.",health:105,ammo:7,speed:5.6,reloadMs:1600},
-  engineer:{name:"Engineer",description:"Sturdier frontline defender with extra personal health.",health:125,ammo:7,speed:5.2,reloadMs:1700},
-  support:{name:"Support",description:"Carries a larger game-ammo supply before reloading.",health:105,ammo:12,speed:5.1,reloadMs:1900},
-  scout:{name:"Scout",description:"Fast-moving role with lighter protection.",health:85,ammo:6,speed:7.1,reloadMs:1400},
-  officer:{name:"Officer",description:"Helps nearby friendly troops stay coordinated and fight more effectively.",health:100,ammo:8,speed:5.8,reloadMs:1500},
-  quartermaster:{name:"Quartermaster",description:"Improves friendly squad recovery during long pushes.",health:110,ammo:8,speed:5.4,reloadMs:1550},
-  signalman:{name:"Signalman",description:"Coordinates the advance and speeds up uncontested sector captures.",health:95,ammo:7,speed:6.1,reloadMs:1500},
-  builder:{name:"Builder",description:"A sturdy objective specialist who helps secure contested ground.",health:120,ammo:7,speed:5.0,reloadMs:1750}
+  rifleman:{name:"Rifleman",description:"Reliable all-rounder with average health, speed and supplies. No special ability.",health:100,ammo:8,speed:5.8,reloadMs:1500,fieldworks:0},
+  medic:{name:"Medic",description:"Restores 5 health to nearby allies every 2 seconds. Lower personal health and a smaller supply.",health:90,ammo:6,speed:5.4,reloadMs:1650,fieldworks:0},
+  engineer:{name:"Engineer",description:"Can deploy 3 field-cover sections. Slower movement, fewer supplies and longer reload.",health:110,ammo:6,speed:4.8,reloadMs:1850,fieldworks:3},
+  support:{name:"Support",description:"Carries 10 rounds before reloading. Slow movement and the longest reload.",health:100,ammo:10,speed:4.8,reloadMs:2100,fieldworks:0},
+  scout:{name:"Scout",description:"Fastest class for moving between sectors. Lowest health and a small supply.",health:75,ammo:6,speed:7,reloadMs:1450,fieldworks:0},
+  officer:{name:"Officer",description:"Nearby allies coordinate more quickly. Lower personal health and a smaller supply.",health:90,ammo:7,speed:5.4,reloadMs:1550,fieldworks:0},
+  quartermaster:{name:"Quartermaster",description:"Friendly troops recover faster. Average health but slower movement and reload.",health:100,ammo:8,speed:5.2,reloadMs:1650,fieldworks:0},
+  signalman:{name:"Signalman",description:"Speeds up uncontested captures while in the zone. Low health and limited supplies.",health:85,ammo:6,speed:5.9,reloadMs:1650,fieldworks:0},
+  builder:{name:"Builder",description:"Can deploy 4 field-cover sections and gains a small capture bonus. Slowest movement and reload.",health:115,ammo:6,speed:4.6,reloadMs:1850,fieldworks:4}
 };
 let medicTick=0;
 let aiMedicTick=0;
@@ -476,6 +476,8 @@ function updateHud(){
   const shieldWait=Math.max(0,Math.ceil((playerState.shieldBrokenUntil-performance.now())/1000));
   shieldHud.textContent=shieldWait>0?"BROKEN "+shieldWait+"s":(playerState.shield?"ACTIVE ":"READY ")+Math.ceil(playerState.shieldDurability)+"%";
   document.querySelector("#kc-class").textContent=classDefinitions[playerState.classId].name.toUpperCase();
+  const toolHud=document.querySelector("#kc-tool");
+  if(toolHud)toolHud.textContent=["engineer","builder"].includes(playerState.classId)?(playerState.toolMode==="fieldworks"?"FIELDWORKS "+playerState.fieldworkCharges:"STANDARD · "+playerState.fieldworkCharges+" COVERS"):"STANDARD";
 }
 // Removed drifting haze/air specks; battle visuals now come from brief impact effects.
 const dustBursts=[];
@@ -689,7 +691,7 @@ function soldierCombat(delta,now){
   if(playerState.classId==="medic"&&medicTick>=2){
     medicTick=0;
     const nearby=alive("blue").filter(s=>s.group.position.distanceTo(camera.position)<16&&s.hp<s.maxHp);
-    nearby.forEach(s=>{s.hp=Math.min(s.maxHp,s.hp+5);const ratio=s.hp/s.maxHp;s.hpFill.scale.x=Math.max(.001,ratio);s.hpFill.position.x=-(1-ratio)*.43;});
+    nearby.forEach(s=>{s.hp=Math.min(s.maxHp,s.hp+5);const ratio=s.hp/s.maxHp;s.hpFill.scale.x=Math.max(.001,ratio);s.hpFill.position.x=-(1-ratio)*.43;s.lastDamageAt=now;});
   }
   // Friendly squad medics periodically restore a little health to nearby allies.
   aiMedicTick+=delta;
@@ -856,6 +858,31 @@ function updateRegeneration(delta,now){
     s.hpFill.position.x=-(1-ratio)*.43;
   }
 }
+function placeFieldCover(){
+  if(!gameActive||playerState.health<=0||playerState.won)return;
+  if(!["engineer","builder"].includes(playerState.classId)){statusText("Fieldworks are available to Engineer and Builder classes");return;}
+  if(playerState.fieldworkCharges<=0){statusText("No field-cover sections remaining");return;}
+  const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();
+  const position=camera.position.clone().addScaledVector(forward,4.2);
+  position.y=0;
+  if(position.x<-38||position.x>38||position.z<-114||position.z>92){statusText("Cannot place field cover here");return;}
+  if(fieldCoverObjects.some(o=>o.position.distanceTo(position)<5)){statusText("Too close to another field-cover section");return;}
+  const cover=new THREE.Group();cover.position.copy(position);cover.rotation.y=Math.atan2(forward.x,forward.z);scene.add(cover);
+  const bagMat=materials.sand;
+  for(let i=-1;i<=1;i++){
+    const bag=new THREE.Mesh(new THREE.SphereGeometry(.58,10,8),bagMat);
+    bag.scale.set(1,.62,.72);bag.position.set(i*.92,.48,0);bag.castShadow=true;bag.receiveShadow=true;cover.add(bag);
+  }
+  const timberPost=box(cover,-1.42,.62,0,.12,1.1,.14,timber);
+  const timberPost2=box(cover,1.42,.62,0,.12,1.1,.14,timber);
+  const rail=box(cover,0,1.05,0,3,.12,.16,timberLight);
+  fieldCoverObjects.push(cover);
+  playerState.fieldworkCharges--;
+  playerState.toolMode="standard";
+  statusText("Field cover deployed · "+playerState.fieldworkCharges+" sections remaining");
+  updateHud();
+}
+const fieldCoverObjects=[];
 function updateMovement(delta){
   if(!gameActive||playerState.health<=0)return;
   const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();
@@ -867,7 +894,8 @@ function updateMovement(delta){
   if(keys.has("KeyA"))direction.sub(right);
   if(direction.lengthSq()>0){
     direction.normalize();
-    const speed=(playerState.sprinting?playerState.speed*1.65:playerState.speed)*(playerState.shield?.64:1);
+    const sprintFactor=playerState.classId==="support"||playerState.classId==="builder"?.1:1.65;
+    const speed=(playerState.sprinting?playerState.speed*sprintFactor:playerState.speed)*(playerState.shield?.64:1);
     camera.position.addScaledVector(direction,speed*delta);
     camera.position.x=THREE.MathUtils.clamp(camera.position.x,-42,42);
     camera.position.z=THREE.MathUtils.clamp(camera.position.z,-118,96);
@@ -910,12 +938,19 @@ game.addEventListener("click",()=>{
   }
 });
 window.addEventListener("mousedown",e=>{
+  if(e.button===1&&gameActive){placeFieldCover();e.preventDefault();return;}
   if(e.button===0&&gameActive)fire();
   if(e.button===2){playerState.aiming=true;camera.fov=52;camera.updateProjectionMatrix();weapon.position.set(-.08,-.01,-.03);}
 });
 window.addEventListener("mouseup",e=>{
   if(e.button===2){playerState.aiming=false;camera.fov=74;camera.updateProjectionMatrix();weapon.position.set(0,0,0);}
 });
+window.addEventListener("wheel",e=>{
+  if(!gameActive||!["engineer","builder"].includes(playerState.classId))return;
+  playerState.toolMode=playerState.toolMode==="standard"?"fieldworks":"standard";
+  statusText(playerState.toolMode==="fieldworks"?"Fieldworks selected · Middle-click to deploy cover":"Standard equipment selected");
+  updateHud();
+},{passive:true});
 window.addEventListener("contextmenu",e=>e.preventDefault());
 document.addEventListener("pointerlockerror",()=>{
   fallbackLook=true;
@@ -934,7 +969,7 @@ controls.addEventListener("unlock",()=>{
 document.querySelector("#start-button").addEventListener("click",()=>{startScreen.classList.add("hidden");classScreen.classList.remove("hidden");});
 document.querySelectorAll("[data-class]").forEach(button=>button.addEventListener("click",()=>{
   const id=button.dataset.class,chosen=classDefinitions[id];
-  playerState.classId=id;playerState.health=chosen.health;playerState.maxHealth=chosen.health;playerState.ammo=chosen.ammo;playerState.maxAmmo=chosen.ammo;playerState.speed=chosen.speed;playerState.reloadMs=chosen.reloadMs;
+  playerState.classId=id;playerState.health=chosen.health;playerState.maxHealth=chosen.health;playerState.ammo=chosen.ammo;playerState.maxAmmo=chosen.ammo;playerState.speed=chosen.speed;playerState.reloadMs=chosen.reloadMs;playerState.fieldworkCharges=chosen.fieldworks;playerState.toolMode="standard";
   document.querySelector("#kc-class").textContent=chosen.name.toUpperCase();
   classScreen.classList.add("hidden");deployScreen.classList.remove("hidden");updateHud();
 }));
