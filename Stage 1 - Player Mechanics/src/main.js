@@ -198,11 +198,14 @@ function flagBase(x,z,color,label){
   return {pole,cloth,marker,label};
 }
 const friendlyBase=flagBase(0,61,0x426b91,"BLUE BASE");
-const enemyBase=flagBase(0,-61,0x9a4a40,"RED BASE");
+const enemyBase=flagBase(0,-69,0x9a4a40,"RED BASE");
+// Five linked sectors create a longer, steadily advancing frontline.
 const frontlineObjectives=[
-  {name:"A",label:"FORWARD TRENCH",z:24,x:0,captured:false,progress:0},
-  {name:"B",label:"CROSSROADS",z:-5,x:0,captured:false,progress:0},
-  {name:"C",label:"REAR BUNKER",z:-34,x:0,captured:false,progress:0}
+  {name:"A",label:"FORWARD TRENCH",z:29,x:0,captured:false,progress:0},
+  {name:"B",label:"COMMUNICATION LINE",z:9,x:0,captured:false,progress:0},
+  {name:"C",label:"CROSSROADS",z:-13,x:0,captured:false,progress:0},
+  {name:"D",label:"RUINED VILLAGE",z:-36,x:0,captured:false,progress:0},
+  {name:"E",label:"REAR COMMAND POST",z:-56,x:0,captured:false,progress:0}
 ];
 let activeObjective=0;
 for(const objective of frontlineObjectives){
@@ -546,7 +549,7 @@ function captureUpdate(delta){
     activeObjective++;
     playerState.capture=0;
     if(activeObjective>=frontlineObjectives.length){
-      playerState.won=true;statusText("Victory · All frontline sectors secured");
+      playerState.won=true;statusText("Victory · All five frontline sectors secured");
       document.querySelector("#kc-result").classList.remove("hidden");
       controls.unlock();
     }else{
@@ -632,7 +635,7 @@ document.addEventListener("pointerlockerror",()=>{
 controls.addEventListener("lock",()=>{
   fallbackLook=false;
   startScreen.classList.add("hidden");classScreen.classList.add("hidden");deployScreen.classList.add("hidden");pauseScreen.classList.add("hidden");game.classList.add("playing");
-  statusText("Hold the line · Advance toward the red flag");
+  statusText("Frontlines · Advance sector by sector with your squad");
 });
 controls.addEventListener("unlock",()=>{
   keys.clear();playerState.sprinting=false;game.classList.remove("playing");
