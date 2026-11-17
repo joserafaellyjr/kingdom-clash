@@ -341,20 +341,20 @@ function updateHud(){
 const dustBursts=[];
 const arcadeSparks=[];
 const arcadeBolts=[];
-function launchArcadeBolt(start,end,target=null){
+function launchArcadeBolt(start,end,target=null,damage=50,tint=0xffdf8a){
   const group=new THREE.Group();
   const direction=new THREE.Vector3().subVectors(end,start);
   const distance=direction.length();
   if(distance<.05)return;
   direction.normalize();
-  const core=new THREE.Mesh(new THREE.SphereGeometry(.105,10,8),new THREE.MeshBasicMaterial({color:0xffdf8a,emissive:0x9b5a12,emissiveIntensity:.8,depthWrite:false}));
-  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.025,.055,.72,7),new THREE.MeshBasicMaterial({color:0xffa94d,transparent:true,opacity:.78,depthWrite:false}));
+  const core=new THREE.Mesh(new THREE.SphereGeometry(.105,10,8),new THREE.MeshBasicMaterial({color:tint,depthWrite:false}));
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.025,.055,.72,7),new THREE.MeshBasicMaterial({color:tint,transparent:true,opacity:.78,depthWrite:false}));
   tail.rotation.x=Math.PI/2;
   group.add(core,tail);
   group.position.copy(start);
   group.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),direction);
   scene.add(group);
-  arcadeBolts.push({group,start:start.clone(),end:end.clone(),target,direction,distance,travelled:0,speed:22});
+  arcadeBolts.push({group,start:start.clone(),end:end.clone(),target,damage,direction,distance,travelled:0,speed:22});
 }
 
 function spawnArcadeSparks(position,tint=0xffdf8a){
@@ -392,7 +392,7 @@ function updateAtmosphere(delta){
       if(bolt.target&&bolt.target.alive){
         spawnArcadeSparks(bolt.end,0xffdf8a);
         spawnDust(bolt.end,0xb9a98b);
-        damageSoldier(bolt.target,50);
+        damageSoldier(bolt.target,bolt.damage);
         statusText("Arcade bolt impact");
       }else{
         spawnDust(bolt.end,0xa99f8b);
@@ -526,10 +526,9 @@ function soldierCombat(delta,now){
       if(s.cooldown<=0){
         const officerBoost=playerState.classId==="officer"&&s.team==="blue"&&s.group.position.distanceTo(camera.position)<18;
         s.cooldown=(officerBoost?1.25:1.6)+Math.random()*.9;
+        const startPoint=s.group.position.clone().add(new THREE.Vector3(0,1.2,0));
         const impactPoint=target.group.position.clone().add(new THREE.Vector3(0,1.1,0));
-        spawnArcadeSparks(impactPoint,s.team==="blue"?0x9edcff:0xffb58c);
-        spawnDust(impactPoint,s.team==="blue"?0xaab9bf:0xbda69a);
-        damageSoldier(target,8);if(target.team==="blue"&&target.hp<=0)updateHud();
+        launchArcadeBolt(startPoint,impactPoint,target,8,s.team==="blue"?0x9edcff:0xffb58c);
       }
     }else{
       const move=new THREE.Vector3();
