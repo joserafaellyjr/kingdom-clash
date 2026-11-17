@@ -335,31 +335,7 @@ function updateHud(){
   document.querySelector("#kc-shield").textContent=playerState.shield?"DEPLOYED":"STOWED";
   document.querySelector("#kc-class").textContent=classDefinitions[playerState.classId].name.toUpperCase();
 }
-const hazeCount=420;
-const hazePositions=new Float32Array(hazeCount*3), hazeDrift=[];
-for(let i=0;i<hazeCount;i++){
-  hazePositions[i*3]=(Math.random()-.5)*150;
-  hazePositions[i*3+1]=.5+Math.random()*13;
-  hazePositions[i*3+2]=(Math.random()-.5)*150;
-  hazeDrift.push({x:(Math.random()-.5)*.65,y:.04+Math.random()*.16,z:(Math.random()-.5)*.3});
-}
-const hazeGeometry=new THREE.BufferGeometry();
-hazeGeometry.setAttribute("position",new THREE.BufferAttribute(hazePositions,3));
-const haze=new THREE.Points(hazeGeometry,new THREE.PointsMaterial({color:0xd7cfbd,size:.42,transparent:true,opacity:.42,depthWrite:false,sizeAttenuation:true}));
-scene.add(haze);
-// A second, more visible layer of windblown particles crossing the battlefield.
-const airCount=190;
-const airPositions=new Float32Array(airCount*3),airVelocity=[];
-for(let i=0;i<airCount;i++){
-  airPositions[i*3]=(Math.random()-.5)*105;
-  airPositions[i*3+1]=.8+Math.random()*12;
-  airPositions[i*3+2]=(Math.random()-.5)*145;
-  airVelocity.push({x:.9+Math.random()*.8,y:(Math.random()-.5)*.12,z:-.25+Math.random()*.5});
-}
-const airGeometry=new THREE.BufferGeometry();
-airGeometry.setAttribute("position",new THREE.BufferAttribute(airPositions,3));
-const airParticles=new THREE.Points(airGeometry,new THREE.PointsMaterial({color:0xe0d5bd,size:.58,transparent:true,opacity:.48,depthWrite:false,sizeAttenuation:true}));
-scene.add(airParticles);
+// Removed drifting haze/air specks; battle visuals now come from brief impact effects.
 const dustBursts=[];
 function spawnDust(position,tint=0xaaa18e){
   const group=new THREE.Group();group.position.copy(position);scene.add(group);
@@ -372,26 +348,6 @@ function spawnDust(position,tint=0xaaa18e){
   dustBursts.push({group,bits,age:0});
 }
 function updateAtmosphere(delta){
-  const p=hazeGeometry.attributes.position;
-  for(let i=0;i<hazeCount;i++){
-    const d=hazeDrift[i];
-    p.array[i*3]+=d.x*delta;p.array[i*3+1]+=d.y*delta;p.array[i*3+2]+=d.z*delta;
-    if(p.array[i*3+1]>14){p.array[i*3+1]=.5;p.array[i*3]=(Math.random()-.5)*150;p.array[i*3+2]=(Math.random()-.5)*150;}
-  }
-  p.needsUpdate=true;
-  const air=airGeometry.attributes.position;
-  for(let i=0;i<airCount;i++){
-    const v=airVelocity[i];
-    air.array[i*3]+=v.x*delta;
-    air.array[i*3+1]+=v.y*delta;
-    air.array[i*3+2]+=v.z*delta;
-    if(air.array[i*3]>54){
-      air.array[i*3]=-54;
-      air.array[i*3+1]=.8+Math.random()*12;
-      air.array[i*3+2]=(Math.random()-.5)*145;
-    }
-  }
-  air.needsUpdate=true;
   for(let i=dustBursts.length-1;i>=0;i--){
     const burst=dustBursts[i];burst.age+=delta;
     for(const bit of burst.bits){
