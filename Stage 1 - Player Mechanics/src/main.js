@@ -841,6 +841,7 @@ document.querySelector("#resume-button").addEventListener("click",()=>{
   try { controls.lock(); } catch (error) { fallbackLook=true;statusText("Resumed · Use WASD"); }
 });
 document.querySelector("#kc-restart").addEventListener("click",()=>location.reload());
+updateProgressionUI();
 
 function animate(now){
   requestAnimationFrame(animate);
