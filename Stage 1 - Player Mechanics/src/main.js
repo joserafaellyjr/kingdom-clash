@@ -290,6 +290,13 @@ box(weapon,.34,-.43,-.66,.12,.3,.15,materials.wood);
 box(weapon,.34,-.16,-.62,.08,.1,.22,materials.metal);
 
 weapon.position.set(0,0,0);
+const fieldworkTool=new THREE.Group();camera.add(fieldworkTool);
+const toolHandle=box(fieldworkTool,.34,-.34,-.72,.09,.72,.09,timberLight);
+toolHandle.rotation.x=-.18;
+const toolGrip=box(fieldworkTool,.34,-.08,-.72,.14,.12,.14,materials.wood);
+const toolBlade=box(fieldworkTool,.34,-.78,-.72,.34,.3,.055,materials.metal);
+toolBlade.rotation.z=-.12;
+fieldworkTool.visible=false;
 // Bright, short-lived arcade flash attached to the visible first-person prop.
 const muzzleFlash=new THREE.Group();camera.add(muzzleFlash);
 const flashCore=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0,depthWrite:false}));
@@ -640,6 +647,7 @@ function damageSoldier(s,amount){
 }
 function fire(){
   if(!gameActive||playerState.reloading||playerState.won)return;
+  if(playerState.toolMode==="fieldworks"){statusText("Fieldworks selected · Middle-click to deploy cover");return;}
   if(playerState.ammo<=0){statusText("Out of ammo · Press R to reload");return;}
   playerState.ammo--; updateHud();
   showMuzzleFlash();
@@ -949,6 +957,9 @@ window.addEventListener("mouseup",e=>{
 window.addEventListener("wheel",e=>{
   if(!gameActive||!["engineer","builder"].includes(playerState.classId))return;
   playerState.toolMode=playerState.toolMode==="standard"?"fieldworks":"standard";
+  const hasFieldworks=["engineer","builder"].includes(playerState.classId);
+  weapon.visible=!hasFieldworks||playerState.toolMode==="standard";
+  fieldworkTool.visible=hasFieldworks&&playerState.toolMode==="fieldworks";
   statusText(playerState.toolMode==="fieldworks"?"Fieldworks selected · Middle-click to deploy cover":"Standard equipment selected");
   updateHud();
 },{passive:true});
@@ -971,6 +982,7 @@ document.querySelector("#start-button").addEventListener("click",()=>{startScree
 document.querySelectorAll("[data-class]").forEach(button=>button.addEventListener("click",()=>{
   const id=button.dataset.class,chosen=classDefinitions[id];
   playerState.classId=id;playerState.health=chosen.health;playerState.maxHealth=chosen.health;playerState.ammo=chosen.ammo;playerState.maxAmmo=chosen.ammo;playerState.speed=chosen.speed;playerState.reloadMs=chosen.reloadMs;playerState.fieldworkCharges=chosen.fieldworks;playerState.toolMode="standard";
+  weapon.visible=true;fieldworkTool.visible=false;
   document.querySelector("#kc-class").textContent=chosen.name.toUpperCase();
   classScreen.classList.add("hidden");deployScreen.classList.remove("hidden");updateHud();
 }));
