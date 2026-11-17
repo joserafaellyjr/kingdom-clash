@@ -391,7 +391,6 @@ function updateHud(){
   const shieldWait=Math.max(0,Math.ceil((playerState.shieldBrokenUntil-performance.now())/1000));
   shieldHud.textContent=shieldWait>0?"BROKEN "+shieldWait+"s":(playerState.shield?"ACTIVE ":"READY ")+Math.ceil(playerState.shieldDurability)+"%";
   document.querySelector("#kc-class").textContent=classDefinitions[playerState.classId].name.toUpperCase();
-  updateProgressionUI();
 }
 // Removed drifting haze/air specks; battle visuals now come from brief impact effects.
 const dustBursts=[];
