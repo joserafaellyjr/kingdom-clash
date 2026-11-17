@@ -44,14 +44,15 @@ button:focus-visible, .secondary-link:focus-visible { outline: 3px solid #f0dba9
   .panel { padding: 30px 22px; }
 }
 
-.class-panel{width:min(100%,760px);max-height:92vh;overflow:auto}
-.class-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:20px}
-.class-card{min-height:112px;padding:16px 10px;border:1px solid #cbb27a66;background:linear-gradient(145deg,#354235,#1b261e);color:#f2ead8;text-align:left;letter-spacing:0}
-.class-card strong{display:block;font-size:13px;letter-spacing:.1em;color:#e5c98b}
-.class-card small{display:block;margin:9px 0;color:#d0d4c9;font-size:11px;line-height:1.4}
-.class-card span{display:block;color:#9da995;font-size:10px}
+.class-panel{width:min(94vw,900px);max-height:90vh;overflow-y:auto;padding:30px}
+.class-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px;align-items:stretch}
+.class-card{width:100%;min-width:0;min-height:126px;padding:15px 13px;border:1px solid #cbb27a66;background:linear-gradient(145deg,#354235,#1b261e);color:#f2ead8;text-align:left;letter-spacing:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;white-space:normal}
+.class-card strong{display:block;font-size:12px;line-height:1.3;letter-spacing:.08em;color:#e5c98b}
+.class-card small{display:block;margin:9px 0;color:#d0d4c9;font-size:11px;line-height:1.4;flex:1}
+.class-card span{display:block;color:#b9c3b0;font-size:10px;line-height:1.3}
 .class-card:hover{border-color:#e4c47b;background:linear-gradient(145deg,#465541,#253329)}
-@media(max-width:620px){.class-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.class-card{min-height:100px}}
+@media(max-width:700px){.class-panel{padding:24px 16px}.class-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.class-card{min-height:116px;padding:12px 10px}}
+@media(max-width:390px){.class-grid{grid-template-columns:1fr}.class-card{min-height:90px}}
 
 #battle-hud{flex-wrap:wrap;justify-content:center;max-width:min(94vw,900px);white-space:normal;line-height:1.4}
 #battle-hud span{padding:2px 3px}
