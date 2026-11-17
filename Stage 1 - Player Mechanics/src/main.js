@@ -209,9 +209,9 @@ function ruinedBuilding(x,z,rotation=0){
 ruinedBuilding(-18,-18,.18);
 ruinedBuilding(18,9,-.22);
 ruinedBuilding(-17,48,-.12);
-ruinedBuilding(-18,-75,.1);
-ruinedBuilding(18,-84,-.3);
-dugout(-15,-91,.1);
+ruinedBuilding(-30,-75,.1);
+ruinedBuilding(30,-84,-.3);
+dugout(-31,-91,.1);
 communicationTrench(-19,-54,-11,-68);
 communicationTrench(19,-54,11,-68);
 
@@ -240,6 +240,13 @@ function flagBase(x,z,color,label){
 }
 const friendlyBase=flagBase(0,88,0x426b91,"BLUE BASE");
 const enemyBase=flagBase(0,-112,0x9a4a40,"RED BASE");
+// Keep the final sector and enemy-side respawn approach open and unobstructed.
+for(const [cx,cz,radius] of [[0,-96,13],[0,-112,10],[0,88,10]]){
+  const clearing=new THREE.Mesh(new THREE.CircleGeometry(radius,48),materials.grass);
+  clearing.rotation.x=-Math.PI/2;clearing.position.set(cx,.018,cz);clearing.receiveShadow=true;scene.add(clearing);
+  const boundary=new THREE.Mesh(new THREE.RingGeometry(radius-.18,radius,48),new THREE.MeshBasicMaterial({color:0x777d6c,transparent:true,opacity:.18,side:THREE.DoubleSide}));
+  boundary.rotation.x=-Math.PI/2;boundary.position.set(cx,.035,cz);scene.add(boundary);
+}
 // Five linked sectors create a longer, steadily advancing frontline.
 const frontlineObjectives=[
   {name:"A",label:"FORWARD TRENCH",z:29,x:0,captured:false,progress:0},
