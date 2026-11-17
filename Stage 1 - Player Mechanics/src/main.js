@@ -258,6 +258,7 @@ const frontlineObjectives=[
   {name:"G",label:"COMMAND RIDGE",z:-96,x:0,captured:false,progress:0}
 ];
 let activeObjective=0;
+let objectivePingUntil=0;
 for(const objective of frontlineObjectives){
   const ring=new THREE.Mesh(new THREE.RingGeometry(5.2,5.65,48),new THREE.MeshBasicMaterial({color:0xc6b58d,transparent:true,opacity:.62,side:THREE.DoubleSide}));
   ring.rotation.x=-Math.PI/2;ring.position.set(objective.x,.07,objective.z);scene.add(ring);
@@ -370,7 +371,7 @@ for(let i=0;i<10;i++){
   const x=((i%5)-2)*2.5, z=-39-Math.floor(i/5)*3.4;
   makeSoldier("red",x,z,i);
 }
-const playerState={health:100,maxHealth:100,lastDamageAt:performance.now(),ammo:8,maxAmmo:8,reloading:false,shield:false,shieldDurability:100,shieldMax:100,shieldBrokenUntil:0,aiming:false,sprinting:false,lastW:0,capture:0,won:false,classId:"rifleman",reloadMs:1500,speed:5.8,respawnAt:0,xp:0,level:1,coins:100,inventory:[],equipped:"Standard Kit"};
+const playerState={health:100,maxHealth:100,lastDamageAt:performance.now(),ammo:8,maxAmmo:8,reloading:false,shield:false,shieldDurability:100,shieldMax:100,shieldBrokenUntil:0,aiming:false,sprinting:false,lastW:0,capture:0,won:false,classId:"rifleman",reloadMs:1500,speed:5.8,respawnAt:0,xp:0,level:1,coins:100,inventory:[],supplies:{},equipped:"Standard Kit"};
 const classDefinitions={
   rifleman:{name:"Rifleman",description:"Balanced frontline soldier. A reliable all-rounder.",health:100,ammo:8,speed:5.8,reloadMs:1500},
   medic:{name:"Medic",description:"Keeps nearby friendly soldiers in the fight with gradual squad healing.",health:105,ammo:7,speed:5.6,reloadMs:1600},
@@ -386,12 +387,81 @@ let medicTick=0;
 let aiMedicTick=0;
 let rallyMode=false;
 const keys=new Set();
-const shopItems=[{id:"scarf",name:"Veteran Scarf",price:75,description:"A cosmetic uniform accent."},{id:"banner",name:"Squad Banner",price:110,description:"A decorative squad banner."},{id:"badge",name:"Service Badge",price:160,description:"A cosmetic service badge."}];
-function saveProgression(){try{localStorage.setItem("kcProgression",JSON.stringify({xp:playerState.xp,level:playerState.level,coins:playerState.coins,inventory:playerState.inventory,equipped:playerState.equipped}));}catch(error){}}
-try{const saved=JSON.parse(localStorage.getItem("kcProgression")||"null");if(saved){playerState.xp=Math.max(0,Number(saved.xp)||0);playerState.level=Math.max(1,Math.floor(Number(saved.level)||1));playerState.coins=Math.max(0,Math.floor(Number(saved.coins)||0));playerState.inventory=Array.isArray(saved.inventory)?saved.inventory.filter(id=>shopItems.some(item=>item.id===id)):[];playerState.equipped=playerState.inventory.includes(saved.equipped)?saved.equipped:"Standard Kit";}}catch(error){}
+const shopItems=[
+  {id:"scarf",name:"Veteran Scarf",price:75,description:"A cosmetic uniform accent.",type:"cosmetic"},
+  {id:"banner",name:"Squad Banner",price:110,description:"A decorative squad banner.",type:"cosmetic"},
+  {id:"badge",name:"Service Badge",price:160,description:"A cosmetic service badge.",type:"cosmetic"},
+  {id:"rations",name:"Field Rations",price:35,description:"Restore 30 player health. Consumable.",type:"supply"},
+  {id:"medkit",name:"Medical Kit",price:75,description:"Restore 60 player health. Consumable.",type:"supply"},
+  {id:"flare",name:"Signal Flare",price:55,description:"Highlights the active objective for 12 seconds.",type:"supply"},
+  {id:"rally",name:"Squad Rally",price:95,description:"Restore 20 health to nearby friendly soldiers.",type:"supply"}
+];
+function saveProgression(){try{localStorage.setItem("kcProgression",JSON.stringify({xp:playerState.xp,level:playerState.level,coins:playerState.coins,inventory:playerState.inventory,supplies:playerState.supplies,equipped:playerState.equipped}));}catch(error){}}
+try{
+  const saved=JSON.parse(localStorage.getItem("kcProgression")||"null");
+  if(saved){
+    playerState.xp=Math.max(0,Number(saved.xp)||0);
+    playerState.level=Math.max(1,Math.floor(Number(saved.level)||1));
+    playerState.coins=Math.max(0,Math.floor(Number(saved.coins)||0));
+    playerState.inventory=Array.isArray(saved.inventory)?saved.inventory.filter(id=>shopItems.some(item=>item.id===id&&item.type==="cosmetic")):[];
+    playerState.supplies=saved.supplies&&typeof saved.supplies==="object"?saved.supplies:{};
+    for(const item of shopItems.filter(x=>x.type==="supply"))playerState.supplies[item.id]=Math.max(0,Math.floor(Number(playerState.supplies[item.id])||0));
+    playerState.equipped=playerState.inventory.includes(saved.equipped)?saved.equipped:"Standard Kit";
+  }
+}catch(error){}
 function xpToNextLevel(level){return 250*level;}
-function awardXP(amount,reason){playerState.xp+=amount;const coins=Math.floor(amount/10);playerState.coins+=coins;let ups=0;while(playerState.xp>=xpToNextLevel(playerState.level)){playerState.xp-=xpToNextLevel(playerState.level);playerState.level++;ups++;}saveProgression();statusText((reason?reason+" · ":"")+"+"+amount+" XP · +"+coins+" coins"+(ups?" · LEVEL "+playerState.level+"!":""));updateProgressionUI();}
-function updateProgressionUI(){const next=xpToNextLevel(playerState.level);const xp=document.querySelector("#kc-xp");if(xp)xp.textContent=playerState.xp+" / "+next;const level=document.querySelector("#kc-level");if(level)level.textContent=playerState.level;const coins=document.querySelector("#kc-coins");if(coins)coins.textContent=playerState.coins;const bar=document.querySelector("#kc-xp-fill");if(bar)bar.style.width=(playerState.xp/next*100)+"%";const inv=document.querySelector("#kc-inventory-list");if(inv){inv.innerHTML=playerState.inventory.length?playerState.inventory.map(id=>{const item=shopItems.find(x=>x.id===id);return `<div class=\"kc-item\"><b>${item?item.name:id}</b><small>${playerState.equipped===id?"EQUIPPED":"OWNED"}</small><button data-equip=\"${id}\" ${playerState.equipped===id?"disabled":""}>EQUIP</button></div>`;}).join(""):"<p class=\"kc-empty\">Your inventory is empty. Visit the shop to collect cosmetics.</p>";inv.querySelectorAll("[data-equip]").forEach(b=>b.addEventListener("click",()=>{playerState.equipped=b.dataset.equip;saveProgression();updateProgressionUI();statusText("Equipped "+shopItems.find(x=>x.id===playerState.equipped).name);}));}const shop=document.querySelector("#kc-shop-list");if(shop){shop.innerHTML=shopItems.map(item=>{const owned=playerState.inventory.includes(item.id);return `<div class=\"kc-item\"><b>${item.name}</b><small>${item.description}</small><button data-buy=\"${item.id}\" ${owned||playerState.coins<item.price?"disabled":""}>${owned?"OWNED":item.price+" COINS · BUY"}</button></div>`;}).join("");shop.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{const item=shopItems.find(x=>x.id===b.dataset.buy);if(!item||playerState.inventory.includes(item.id)||playerState.coins<item.price)return;playerState.coins-=item.price;playerState.inventory.push(item.id);saveProgression();statusText("Purchased "+item.name);updateProgressionUI();}));}}
+function awardXP(amount,reason){
+  playerState.xp+=amount;const coins=Math.floor(amount/10);playerState.coins+=coins;let ups=0;
+  while(playerState.xp>=xpToNextLevel(playerState.level)){playerState.xp-=xpToNextLevel(playerState.level);playerState.level++;ups++;}
+  saveProgression();statusText((reason?reason+" · ":"")+"+"+amount+" XP · +"+coins+" coins"+(ups?" · LEVEL "+playerState.level+"!":""));updateProgressionUI();
+}
+function useShopItem(id){
+  const item=shopItems.find(x=>x.id===id&&x.type==="supply");
+  if(!item||!playerState.supplies[id])return;
+  if(id==="rations"||id==="medkit"){
+    if(playerState.health<=0||playerState.health>=playerState.maxHealth){statusText("Health is already full · Save this supply");return;}
+    const restored=Math.min(id==="rations"?30:60,playerState.maxHealth-playerState.health);
+    playerState.health+=restored;playerState.lastDamageAt=performance.now();
+    statusText(item.name+" used · Restored "+Math.round(restored)+" health");updateHud();
+  }else if(id==="flare"){
+    if(activeObjective>=frontlineObjectives.length){statusText("All objectives are already secured");return;}
+    objectivePingUntil=performance.now()+12000;
+    statusText("Signal flare active · Objective "+frontlineObjectives[activeObjective].name+" highlighted");
+  }else if(id==="rally"){
+    const nearby=alive("blue").filter(s=>s.group.position.distanceTo(camera.position)<18&&s.hp<s.maxHp);
+    if(!nearby.length){statusText("No nearby allies need recovery · Save this supply");return;}
+    nearby.forEach(s=>{s.hp=Math.min(s.maxHp,s.hp+20);const ratio=s.hp/s.maxHp;s.hpFill.scale.x=Math.max(.001,ratio);s.hpFill.position.x=-(1-ratio)*.43;s.lastDamageAt=performance.now();});
+    statusText("Squad rally · Restored health to "+nearby.length+" nearby allies");
+  }
+  playerState.supplies[id]--;saveProgression();updateProgressionUI();
+}
+function updateProgressionUI(){
+  const next=xpToNextLevel(playerState.level),xp=document.querySelector("#kc-xp"),level=document.querySelector("#kc-level"),coins=document.querySelector("#kc-coins"),bar=document.querySelector("#kc-xp-fill");
+  if(xp)xp.textContent=playerState.xp+" / "+next;if(level)level.textContent=playerState.level;if(coins)coins.textContent=playerState.coins;if(bar)bar.style.width=(playerState.xp/next*100)+"%";
+  const inv=document.querySelector("#kc-inventory-list");
+  if(inv){
+    const cosmetics=playerState.inventory.map(id=>{const item=shopItems.find(x=>x.id===id);return item?`<div class="kc-item"><b>${item.name}</b><small>${playerState.equipped===id?"EQUIPPED":"OWNED"}</small><button data-equip="${id}" ${playerState.equipped===id?"disabled":""}>EQUIP</button></div>`:"";}).join("");
+    const supplies=shopItems.filter(item=>item.type==="supply"&&(playerState.supplies[item.id]||0)>0).map(item=>`<div class="kc-item"><b>${item.name} × ${playerState.supplies[item.id]}</b><small>${item.description}</small><button data-use="${item.id}">USE</button></div>`).join("");
+    inv.innerHTML=cosmetics+supplies||"<p class=\"kc-empty\">Your inventory is empty. Buy supplies or cosmetics in the shop.</p>";
+    inv.querySelectorAll("[data-equip]").forEach(b=>b.addEventListener("click",()=>{playerState.equipped=b.dataset.equip;saveProgression();updateProgressionUI();statusText("Equipped "+shopItems.find(x=>x.id===playerState.equipped).name);}));
+    inv.querySelectorAll("[data-use]").forEach(b=>b.addEventListener("click",()=>useShopItem(b.dataset.use)));
+  }
+  const shop=document.querySelector("#kc-shop-list");
+  if(shop){
+    shop.innerHTML=shopItems.map(item=>{
+      const owned=playerState.inventory.includes(item.id),count=playerState.supplies[item.id]||0;
+      const disabled=playerState.coins<item.price||(item.type==="cosmetic"&&owned);
+      const label=item.type==="supply"?(item.price+" COINS · BUY"+(count?" · OWNED "+count:"")):(owned?"OWNED":item.price+" COINS · BUY");
+      return `<div class="kc-item"><b>${item.name}</b><small>${item.description}</small><button data-buy="${item.id}" ${disabled?"disabled":""}>${label}</button></div>`;
+    }).join("");
+    shop.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{
+      const item=shopItems.find(x=>x.id===b.dataset.buy);if(!item||playerState.coins<item.price)return;
+      if(item.type==="cosmetic"){if(playerState.inventory.includes(item.id))return;playerState.inventory.push(item.id);}
+      else playerState.supplies[item.id]=(playerState.supplies[item.id]||0)+1;
+      playerState.coins-=item.price;saveProgression();statusText("Purchased "+item.name);updateProgressionUI();
+    }));
+  }
+}
 const raycaster=new THREE.Raycaster();
 const center=new THREE.Vector2(0,0);
 const statusText=t=>{status.textContent=t;};
@@ -903,6 +973,12 @@ function animate(now){
   }
   friendlyBase.cloth.rotation.y=Math.sin(now*.0012)*.09;
   enemyBase.cloth.rotation.y=Math.sin(now*.0011+1)*.09;
+  if(activeObjective<frontlineObjectives.length){
+    const activeRing=frontlineObjectives[activeObjective].ring;
+    const pinging=now<objectivePingUntil;
+    activeRing.material.opacity=pinging?.98:.62;
+    activeRing.material.color.set(pinging?0x8bd4ff:0xc6b58d);
+  }
   updateHud();
   renderer.render(scene,camera);
 }
