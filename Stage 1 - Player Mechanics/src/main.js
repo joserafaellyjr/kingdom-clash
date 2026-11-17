@@ -345,7 +345,7 @@ function makeSoldier(team,x,z,index){
     box(group,-.37,1.37,.15,.045,.17,.025,mat(0x9a4a40),false);
   }
   const soldier={team,group,hp:100,maxHp:100,alive:true,cooldown:1+Math.random()*1.4,
-    hpFill,index,role,step:Math.random()*6,parts:{leftLeg,rightLeg,leftArm,rightArm},target:null,lastDamageAt:performance.now()};
+    hpFill,index,role,step:Math.random()*6,parts:{leftLeg,rightLeg,leftArm,rightArm,torso,head,helmetDome},target:null,lastDamageAt:performance.now(),moving:false};
   soldiers.push(soldier); return soldier;
 }
 for(let i=0;i<10;i++){
@@ -575,10 +575,11 @@ function soldierCombat(delta,now){
     }
     const targetVector=new THREE.Vector3();let distance=Infinity;
     if(target){targetVector.subVectors(target.group.position,s.group.position);distance=targetVector.length();if(distance>.01)targetVector.normalize();}
+    const movingToObjective = !(target&&distance<=12) && toObjective.lengthSq()>.05;
+    s.moving=movingToObjective;
     if(target&&distance<=12){
       s.group.rotation.y=Math.atan2(targetVector.x,targetVector.z);
-      s.parts.leftLeg.rotation.x=0;s.parts.rightLeg.rotation.x=0;
-      s.parts.leftArm.rotation.x=0;s.parts.rightArm.rotation.x=0;s.cooldown-=delta;
+      s.cooldown-=delta;
       if(s.cooldown<=0){
         const officerBoost=playerState.classId==="officer"&&s.team==="blue"&&s.group.position.distanceTo(camera.position)<18;
         s.cooldown=(officerBoost?1.25:1.6)+Math.random()*.9;
@@ -594,9 +595,26 @@ function soldierCombat(delta,now){
         move.normalize();s.group.position.addScaledVector(move,(s.team==="blue"?1.55:1.42)*delta);
         s.group.rotation.y=Math.atan2(move.x,move.z);
       }
-      s.step+=delta*6.5;
-      s.parts.leftLeg.rotation.x=Math.sin(s.step)*.38;s.parts.rightLeg.rotation.x=-Math.sin(s.step)*.38;
-      s.parts.leftArm.rotation.x=-Math.sin(s.step)*.2;s.parts.rightArm.rotation.x=Math.sin(s.step)*.2;
+    }
+    // Continuous character animation: walk cycle, breathing, head motion and a relaxed idle.
+    s.step+=delta*(s.moving?8.5:2.1);
+    const stride=s.moving?1:0;
+    const swing=Math.sin(s.step);
+    s.parts.leftLeg.rotation.x=swing*.48*stride;
+    s.parts.rightLeg.rotation.x=-swing*.48*stride;
+    s.parts.leftArm.rotation.x=-swing*.28*stride+(target&&distance<=12?-.22:0);
+    s.parts.rightArm.rotation.x=swing*.28*stride+(target&&distance<=12?-.22:0);
+    const breathe=Math.sin(s.step*.5+(s.index*.7))*.012;
+    s.parts.torso.scale.y=1+breathe;
+    s.parts.torso.position.y=1.12+(s.moving?Math.abs(swing)*.035:Math.sin(s.step*.5)*.012);
+    s.parts.head.rotation.x=Math.sin(s.step*.42+s.index)*.035;
+    s.parts.helmetDome.rotation.x=s.parts.head.rotation.x;
+    s.group.position.y=s.moving?Math.abs(swing)*.035:Math.sin(s.step*.5+s.index)*.008;
+    // Friendly soldiers briefly raise an arm while helping secure a nearby sector.
+    const nearSector=s.team==="blue"&&Math.hypot(s.group.position.x-objective.x,s.group.position.z-objective.z)<7.5;
+    if(nearSector&&!s.moving){
+      s.parts.rightArm.rotation.x=-.85+Math.sin(s.step*1.8)*.08;
+      s.parts.leftArm.rotation.x=-.12;
     }
     s.group.position.x=THREE.MathUtils.clamp(s.group.position.x,-19,19);
     s.group.position.z=THREE.MathUtils.clamp(s.group.position.z,-65,65);
